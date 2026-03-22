@@ -50,88 +50,101 @@ function drawSprite(
   }
 }
 
-// ── X-Wing (top-down, nose up, ~42 pixel-rows x 41 cols) ────────────
-// Palette: many shades for a detailed SNES look
+// ── X-Wing (top-down, nose up) ───────────────────────────────────
+// Designed with THICK prominent wings in a clear X shape
 const XWING_PALETTE: Record<string, string> = {
-  'K': '#1a1a2e', // black outline
-  'L': '#b8b8c8', // light gray body
-  'D': '#707888', // dark gray panels
-  'G': '#585868', // darker gray
-  'M': '#9090a0', // mid gray
+  'K': '#1a1a2e', // outline
+  'L': '#c8c8d8', // light gray body
+  'D': '#808898', // dark gray
+  'G': '#606070', // darker gray
+  'M': '#a0a0b0', // mid gray
   'R': '#cc2222', // red stripe
-  'r': '#ff4444', // red tip bright / laser cannon
-  'e': '#ff6666', // red glow
-  'B': '#2266dd', // blue engine
-  'b': '#44aaff', // blue engine glow bright
-  'n': '#66ccff', // engine nozzle cyan
+  'r': '#ff4444', // red tip / cannon
+  'B': '#2266dd', // engine blue
+  'b': '#55bbff', // engine glow
+  'n': '#88ddff', // engine cyan
   'C': '#1a3355', // cockpit dark
-  'c': '#3388bb', // cockpit highlight
-  'q': '#254470', // cockpit mid
-  'W': '#e0e0f0', // white highlight
-  'H': '#d0d0e0', // highlight slightly dimmer
-  'P': '#888898', // panel line
-  'p': '#686878', // panel line darker
-  'S': '#9898a8', // secondary gray
-  'T': '#484858', // darkest body gray
-  'F': '#a0a0b0', // fuselage lighter
-  'V': '#222238', // very dark accent
+  'c': '#4499cc', // cockpit light
+  'W': '#e8e8f8', // white highlight
+  'P': '#707080', // panel line
+  'T': '#484858', // dark accent
 };
 
-// 47 rows x 47 cols — proper X formation with long wings, all rows padded to 47
+// Clear X-Wing shape: thick 3px wings forming a visible X
+// 33 rows x 33 cols
 const XWING_ROWS = [
-  '.....r.................r.................r.....', // 0  cannon tips
-  '.....R.................K.................R.....', // 1
-  '....KR................KWK................RK....', // 2  wings begin
-  '...KDRK..............KWWWK..............KRDK...', // 3
-  '..KDRGK.............KWFWFWK.............KGRDK..', // 4
-  '.KDRRGK............KWFHFHFWK............KGRRDK.', // 5
-  'KDRRRG............KWFHPLPHFWK............GRRRDG', // 6
-  'KDRRG............KMFHPLLLPHFMK............GRRDK', // 7
-  '.KDRG...........KMDHPLLLLLPHDMK...........GRDK.', // 8
-  '..KDG..........KMDHLPLLLLLPLHDMK..........GDK..', // 9
-  '...KG..........KGDHPLLLLLLLPHDGK..........GK...', // 10
-  '....K.........KGDHLPLLLPLLLPLHDGK.........K....', // 11
-  '..............KGDHLLLLPLLLLLHDGK...............', // 12 fuselage nose
-  '...............KTDHLLLLLLLLLHDTK...............', // 13
-  '...............KTDHLLLLLLLLLHDTK...............', // 14
-  '................KVTDHLLLLHHDTVK................', // 15
-  '................KVTDLLLLLLTVK..................', // 16
-  '................KVTDLPLLDTVK...................', // 17 cockpit
-  '.................KVTCqqqCTVK...................', // 18
-  '.................KVCqcccqCVK...................', // 19
-  '.................KVCcccccCVK...................', // 20
-  '.................KVCcccccCVK...................', // 21
-  '.................KVCqcccqCVK...................', // 22
-  '.................KVTCqqqCTVK...................', // 23
-  '................KVTDLPLLDTVK...................', // 24
-  '................KVTDLLLLLLTVK..................', // 25 mid fuselage
-  '................KVTDHLLLLHHDTVK................', // 26
-  '...............KTDHLLLLLLLLLHDTK...............', // 27
-  '...............KTDHLLLLLLLLLHDTK...............', // 28
-  '..............KGDHLLLLPLLLLLHDGK...............', // 29
-  '....K.........KGDHLPLLLPLLLPLHDGK.........K....', // 30 lower wings
-  '...KG..........KGDHPLLLLLLLPHDGK..........GK...', // 31
-  '..KDG..........KMDHLPLLLLLPLHDMK..........GDK..', // 32
-  '.KDRG...........KMDHPLLLLLPHDMK...........GRDK.', // 33
-  'KDRRG............KMFHPLLLPHFMK............GRRDK', // 34
-  'KDRRRG............KWFHPLPHFWK............GRRRDG', // 35
-  '.KDRRGK............KWFHFHFWK............KGRRDK.', // 36
-  '..KDRGK.............KWFWFWK.............KGRDK..', // 37
-  '...KDRK..............KWWWK..............KRDK...', // 38
-  '....KR................KWK................RK....', // 39
-  '.....R.................K.................R.....', // 40
-  '.....r.................K.................r.....', // 41
-  '...............KTGDDDDDDDDDDGTK................', // 42 engine section
-  '...............KTGppDDDDDDppGTK................', // 43
-  '..............KTBbBnBKKBnBbBTK.................', // 44
-  '..............KTBnBbBKKBbBnBTK.................', // 45
-  '...............KKBnBnKKnBnBKK..................', // 46
+  'r..............W..............r', //  0 cannon tips top
+  'RR.............W.............RR', //  1
+  'GRR...........WLW...........RRG', //  2 upper wings start
+  'GGRR..........WLW..........RRGG', //  3
+  '.GGRR........WLLLW........RRGG.', //  4
+  '..GGRR.......WLPLW.......RRGG..', //  5
+  '...GGRR......WLPLW......RRGG...', //  6
+  '....GGRR.....WLPLW.....RRGG....', //  7
+  '.....GGRR....DLPDL....RRGG.....', //  8
+  '......GGRR...DLPDL...RRGG......', //  9
+  '.......GGR...DLPDL...RGG.......', // 10
+  '..............DLPDL.............', // 11
+  '..............DLWDL.............', // 12
+  '.............KDLWLDK............', // 13 cockpit area
+  '.............KTCcCTK............', // 14
+  '.............KTCccCTK...........', // 15
+  '.............KTCccCTK...........', // 16
+  '.............KTCcCTK............', // 17
+  '.............KDLWLDK............', // 18
+  '..............DLWDL.............', // 19
+  '..............DLPDL.............', // 20
+  '.......GGR...DLPDL...RGG.......', // 21 lower wings start
+  '......GGRR...DLPDL...RRGG......', // 22
+  '.....GGRR....DLPDL....RRGG.....', // 23
+  '....GGRR.....WLPLW.....RRGG....', // 24
+  '...GGRR......WLPLW......RRGG...', // 25
+  '..GGRR.......WLPLW.......RRGG..', // 26
+  '.GGRR........WLLLW........RRGG.', // 27
+  'GGRR..........WLW..........RRGG', // 28
+  'GRR...........WLW...........RRG', // 29
+  'RR.............W.............RR', // 30
+  'r..............T..............r', // 31 cannon tips bottom
+  '..............TBnBT.............', // 32 engines
+  '.............TBbnbBT............', // 33
 ];
 
+// ── Image-based sprites (loaded from PNG files) ─────────────────────
+let xwingImg: HTMLImageElement | null = null;
+let xwingLoaded = false;
+let tieImg: HTMLImageElement | null = null;
+let tieLoaded = false;
+
+function ensureSpritesLoaded() {
+  if (!xwingImg) {
+    xwingImg = new Image();
+    xwingImg.onload = () => { xwingLoaded = true; };
+    xwingImg.src = '/sprites/xwing.png';
+  }
+  if (!tieImg) {
+    tieImg = new Image();
+    tieImg.onload = () => { tieLoaded = true; };
+    tieImg.src = '/sprites/tie.png';
+  }
+}
+
+// Call once to start loading
+ensureSpritesLoaded();
+
 export function drawXWing(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-  ctx.save();
-  drawSprite(ctx, XWING_ROWS, XWING_PALETTE, x, y, scale);
-  ctx.restore();
+  if (xwingLoaded && xwingImg) {
+    const w = xwingImg.width * scale * 1.2;
+    const h = xwingImg.height * scale * 1.2;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false; // Keep pixel art crisp
+    ctx.drawImage(xwingImg, x - w / 2, y - h / 2, w, h);
+    ctx.restore();
+  } else {
+    // Fallback while loading
+    ctx.save();
+    drawSprite(ctx, XWING_ROWS, XWING_PALETTE, x, y, scale);
+    ctx.restore();
+  }
 }
 
 // ── TIE Fighter (top-down, ~32 rows x 33 cols) ─────────────────────
@@ -192,9 +205,18 @@ const TIE_ROWS = [
 ];
 
 export function drawTIE(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-  ctx.save();
-  drawSprite(ctx, TIE_ROWS, TIE_PALETTE, x, y, scale);
-  ctx.restore();
+  if (tieLoaded && tieImg) {
+    const w = tieImg.width * scale * 1.1;
+    const h = tieImg.height * scale * 1.1;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(tieImg, x - w / 2, y - h / 2, w, h);
+    ctx.restore();
+  } else {
+    ctx.save();
+    drawSprite(ctx, TIE_ROWS, TIE_PALETTE, x, y, scale);
+    ctx.restore();
+  }
 }
 
 // ── Turret (wall-mounted, ~16 rows x 16 cols) ──────────────────────
