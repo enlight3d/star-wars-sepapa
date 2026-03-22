@@ -9,6 +9,7 @@ export const contributors = [
   "Jordy",
   "Juliette",
   "Tarik",
+  "Anthony",
 ];
 
 export const password = "palpatine";
@@ -43,9 +44,15 @@ décidé de lui offrir un cadeau
 digne de son rang de Commandant...
 
 Un projet d'envergure colossale,
-fruit de la contribution de dix
+fruit de la contribution de onze
 officiers de la flotte, est sur
 le point d'être révélé...
+
+Un allié spécial, ANTHONY, a
+sécurisé des ressources
+supplémentaires pour l'Empire,
+consolidant les forces en
+présence.
 
 Que la Force soit avec toi,
 Alexis.`;

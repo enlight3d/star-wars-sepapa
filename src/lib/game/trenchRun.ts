@@ -558,7 +558,7 @@ export function createTrenchRun(
 
     // ── Han Solo arrival ──
     const hanSoloTime = PHASE3_GAMEPLAY_START + PHASE3_GAMEPLAY_DURATION * 0.8;
-    if (!hanSoloTriggered && (state.elapsed >= hanSoloTime || state.elapsed >= 2)) { // DEBUG: trigger at 2s
+    if (!hanSoloTriggered && state.elapsed >= hanSoloTime) {
       hanSoloTriggered = true;
       hanSoloTimer = 0;
       hanSoloY = ch + 60;
