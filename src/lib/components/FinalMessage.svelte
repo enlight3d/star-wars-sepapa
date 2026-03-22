@@ -7,9 +7,10 @@
   let showNames = $state(false);
 
   onMount(() => {
-    fadeOutStarWarsTheme(5000);
     setTimeout(() => visible = true, 500);
     setTimeout(() => showNames = true, 2000);
+    // Fade music after all names have appeared (2s delay + 10 names * 0.15s stagger + 1s buffer)
+    setTimeout(() => fadeOutStarWarsTheme(3000), 4500);
   });
 </script>
 
