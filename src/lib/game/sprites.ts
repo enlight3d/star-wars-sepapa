@@ -435,7 +435,7 @@ export function drawTrenchWall(
 
   if (tex) {
     const tileSize = 256;
-    const tileOffY = ((scrollOffset % tileSize) + tileSize) % tileSize;
+    const tileOffY = ((-scrollOffset % tileSize) + tileSize) % tileSize;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     for (let ty = y - tileOffY - tileSize; ty < y + h + tileSize; ty += tileSize) {
@@ -509,7 +509,7 @@ export function drawTrenchFloor(
   ensureTexturesLoaded();
   if (floorTextureLoaded && floorTexture) {
     const tileSize = 256;
-    const tileOffY = ((scrollOffset % tileSize) + tileSize) % tileSize;
+    const tileOffY = ((-scrollOffset % tileSize) + tileSize) % tileSize;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.globalAlpha = 0.85;
