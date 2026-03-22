@@ -300,20 +300,20 @@ export function drawTIE(ctx: CanvasRenderingContext2D, x: number, y: number, sca
 
 // ── Turret (wall-mounted, ~16 rows x 16 cols) ──────────────────────
 const TURRET_PALETTE: Record<string, string> = {
-  'K': '#1a1a2e', // outline
-  'D': '#2a2a40', // dark base
-  'G': '#555570', // mid gray
-  'M': '#444458', // mount gray
-  'L': '#777790', // light gray barrel
-  'H': '#9090a8', // highlight
-  'R': '#cc2222', // red glow
-  'r': '#ff4444', // red tip bright
-  'g': '#22cc22', // green glow
-  'e': '#44ff44', // green tip bright
-  'B': '#333348', // base dark
-  'V': '#222236', // rivet / bolt
-  'S': '#666680', // barrel shine
-  'T': '#3a3a50', // turret body mid
+  'K': '#1a1a1e', // outline (darkest)
+  'D': '#2a2a30', // dark base
+  'G': '#4a4a55', // mid gray (light)
+  'M': '#3a3a42', // mount gray (mid)
+  'L': '#5a5a68', // light gray barrel (lightest)
+  'H': '#6a6a78', // highlight
+  'R': '#ff3322', // red glow
+  'r': '#ff3322', // red tip bright
+  'g': '#33ff44', // green glow
+  'e': '#33ff44', // green tip bright
+  'B': '#2a2a30', // base dark
+  'V': '#101015', // rivet / bolt (shadow)
+  'S': '#4a4a55', // barrel shine
+  'T': '#3a3a42', // turret body mid
 };
 
 const TURRET_ROWS_RIGHT = [
@@ -1009,76 +1009,66 @@ export function drawCrossbar(
   const ps = PS;
   ctx.save();
 
-  // Main bar body — dark metallic
-  ctx.fillStyle = '#2a2a3e';
+  // Main beam body — dark gray metal
+  ctx.fillStyle = '#2a2a30';
   ctx.fillRect(x, y, width, height);
 
-  // Top highlight edge
-  ctx.fillStyle = '#4a4a60';
+  // Top highlight edge (light from above)
+  ctx.fillStyle = '#4a4a55';
   ctx.fillRect(x, y, width, ps);
 
-  // Bottom shadow edge
-  ctx.fillStyle = '#14142a';
+  // Bottom shadow
+  ctx.fillStyle = '#101015';
   ctx.fillRect(x, y + height - ps, width, ps);
 
-  // Mid-tone panel fill
-  ctx.fillStyle = '#323248';
+  // Inner panel fill
+  ctx.fillStyle = '#3a3a42';
   ctx.fillRect(x + ps, y + ps, width - ps * 2, height - ps * 2);
 
   // Horizontal groove line (center)
-  ctx.fillStyle = '#1a1a2e';
+  ctx.fillStyle = '#1a1a1e';
   const midY = y + Math.round(height / 2) - 1;
   ctx.fillRect(x, midY, width, ps);
-  ctx.fillStyle = '#3e3e58';
+  ctx.fillStyle = '#4a4a55';
   ctx.fillRect(x, midY + ps, width, 1);
 
-  // Rivets at regular intervals along the bar
+  // Rivets/bolts along the length every ~12px
   const rivetSpacing = Math.max(12, Math.round(width / 8));
   for (let rx = x + rivetSpacing; rx < x + width - 4; rx += rivetSpacing) {
     // Top rivet row
-    ctx.fillStyle = '#5a5a70';
+    ctx.fillStyle = '#5a5a68';
     ctx.fillRect(Math.round(rx), y + ps * 2, ps, ps);
-    ctx.fillStyle = '#222238';
+    ctx.fillStyle = '#101015';
     ctx.fillRect(Math.round(rx) + 1, y + ps * 2 + 1, 1, 1);
 
     // Bottom rivet row
-    ctx.fillStyle = '#5a5a70';
+    ctx.fillStyle = '#5a5a68';
     ctx.fillRect(Math.round(rx), y + height - ps * 3, ps, ps);
-    ctx.fillStyle = '#222238';
+    ctx.fillStyle = '#101015';
     ctx.fillRect(Math.round(rx) + 1, y + height - ps * 3 + 1, 1, 1);
   }
 
-  // Support brackets at ends
+  // Cross-hatch support brackets at ends
   const bracketW = Math.min(ps * 4, width * 0.1);
   // Left bracket
-  ctx.fillStyle = '#3a3a52';
+  ctx.fillStyle = '#3a3a42';
   ctx.fillRect(x, y - ps * 2, bracketW, height + ps * 4);
-  ctx.fillStyle = '#4e4e66';
+  ctx.fillStyle = '#4a4a55';
   ctx.fillRect(x, y - ps * 2, ps, height + ps * 4);
-  // Right bracket
-  ctx.fillStyle = '#3a3a52';
-  ctx.fillRect(x + width - bracketW, y - ps * 2, bracketW, height + ps * 4);
-  ctx.fillStyle = '#4e4e66';
-  ctx.fillRect(x + width - bracketW, y - ps * 2, ps, height + ps * 4);
-
-  // Warning stripes (diagonal hash marks, subtle)
-  ctx.globalAlpha = 0.15;
-  ctx.fillStyle = '#ffaa00';
-  const stripeSpacing = ps * 6;
-  for (let sx = x; sx < x + width; sx += stripeSpacing) {
-    ctx.fillRect(Math.round(sx), y, ps * 2, height);
+  // Left bracket cross-hatch
+  ctx.fillStyle = '#1a1a1e';
+  for (let cy = y - ps * 2; cy < y + height + ps * 2; cy += ps * 4) {
+    ctx.fillRect(x, Math.round(cy), bracketW, 1);
   }
-  ctx.globalAlpha = 1;
-
-  // Small blinking indicator light on left bracket
-  const blink = Math.sin((scrollOffset * 0.1) + x * 0.01) > 0;
-  if (blink) {
-    ctx.fillStyle = '#ff2222';
-    ctx.fillRect(x + ps, y + Math.round(height / 2) - ps, ps, ps * 2);
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(x, y + Math.round(height / 2) - ps * 2, ps * 3, ps * 4);
-    ctx.globalAlpha = 1;
+  // Right bracket
+  ctx.fillStyle = '#3a3a42';
+  ctx.fillRect(x + width - bracketW, y - ps * 2, bracketW, height + ps * 4);
+  ctx.fillStyle = '#4a4a55';
+  ctx.fillRect(x + width - ps, y - ps * 2, ps, height + ps * 4);
+  // Right bracket cross-hatch
+  ctx.fillStyle = '#1a1a1e';
+  for (let cy = y - ps * 2; cy < y + height + ps * 2; cy += ps * 4) {
+    ctx.fillRect(x + width - bracketW, Math.round(cy), bracketW, 1);
   }
 
   ctx.restore();
@@ -1095,94 +1085,104 @@ export function drawWallProtrusion(
   const ps = PS;
   ctx.save();
 
-  // Base block — darker than walls
-  ctx.fillStyle = '#1e1e32';
+  // Base block — dark gray metal
+  ctx.fillStyle = '#1a1a1e';
   ctx.fillRect(x, y, w, h);
 
   // Top highlight
-  ctx.fillStyle = '#3a3a54';
+  ctx.fillStyle = '#3a3a42';
   ctx.fillRect(x, y, w, ps);
   // Bottom shadow
-  ctx.fillStyle = '#101024';
+  ctx.fillStyle = '#101015';
   ctx.fillRect(x, y + h - ps, w, ps);
 
   // Inner edge highlight (side facing trench center)
   if (onLeft) {
-    ctx.fillStyle = '#44445e';
+    ctx.fillStyle = '#4a4a55';
     ctx.fillRect(x + w - ps, y, ps, h);
   } else {
-    ctx.fillStyle = '#44445e';
+    ctx.fillStyle = '#4a4a55';
     ctx.fillRect(x, y, ps, h);
   }
 
   switch (type) {
     case 'pipes': {
-      // Cluster of horizontal pipes
+      // Cluster of horizontal pipes — dark gray metal
       const pipeCount = Math.max(2, Math.floor(h / (ps * 5)));
       for (let i = 0; i < pipeCount; i++) {
         const py = y + ps * 2 + i * Math.floor((h - ps * 4) / pipeCount);
         const pipeH = ps * 2;
         // Pipe body
-        ctx.fillStyle = '#2e2e48';
+        ctx.fillStyle = '#2a2a30';
         ctx.fillRect(x + ps, py, w - ps * 2, pipeH);
         // Pipe highlight (top)
-        ctx.fillStyle = '#4a4a66';
+        ctx.fillStyle = '#4a4a55';
         ctx.fillRect(x + ps, py, w - ps * 2, 1);
         // Pipe shadow (bottom)
-        ctx.fillStyle = '#161630';
+        ctx.fillStyle = '#101015';
         ctx.fillRect(x + ps, py + pipeH - 1, w - ps * 2, 1);
         // Joint rings
         const jointX = onLeft ? x + w - ps * 3 : x + ps;
-        ctx.fillStyle = '#3a3a56';
+        ctx.fillStyle = '#3a3a42';
         ctx.fillRect(jointX, py - 1, ps * 2, pipeH + 2);
       }
+      // Small green status light
+      ctx.fillStyle = '#33ff44';
+      ctx.fillRect(x + ps * 2, y + ps, ps, ps);
       break;
     }
     case 'antenna': {
-      // Antenna array — vertical spikes
+      // Antenna array — dark gray vertical spikes
       const antennaCount = Math.max(2, Math.floor(w / (ps * 5)));
       for (let i = 0; i < antennaCount; i++) {
         const ax = x + ps * 2 + i * Math.floor((w - ps * 4) / antennaCount);
         const antennaH = h * 0.6 + (i % 2) * h * 0.2;
         // Antenna shaft
-        ctx.fillStyle = '#383854';
+        ctx.fillStyle = '#3a3a42';
         ctx.fillRect(ax, y + h - antennaH, ps, antennaH);
-        // Antenna tip (blinking)
-        const tipBlink = Math.sin(scrollOffset * 0.15 + i * 1.5) > 0.3;
-        ctx.fillStyle = tipBlink ? '#ff4444' : '#882222';
-        ctx.fillRect(ax - 1, y + h - antennaH - ps, ps + 2, ps);
+        // Panel line on shaft
+        ctx.fillStyle = '#1a1a1e';
+        ctx.fillRect(ax, y + h - antennaH + Math.round(antennaH * 0.5), ps, 1);
+        // Antenna tip — small green light
+        ctx.fillStyle = '#33ff44';
+        ctx.fillRect(ax, y + h - antennaH - ps, ps, ps);
       }
       // Base plate
-      ctx.fillStyle = '#282844';
+      ctx.fillStyle = '#2a2a30';
       ctx.fillRect(x + ps, y + h - ps * 3, w - ps * 2, ps * 2);
+      // Panel line on base
+      ctx.fillStyle = '#1a1a1e';
+      ctx.fillRect(x + ps, y + h - ps * 2, w - ps * 2, 1);
       break;
     }
     case 'sensor': {
-      // Sensor dish — small circular dish
-      const dishCx = x + w / 2;
-      const dishCy = y + h / 2;
-      const dishR = Math.min(w, h) * 0.35;
-      // Dish mount arm
+      // Sensor block — rectangular with panel lines
+      const sensorW = Math.round(w * 0.6);
+      const sensorH = Math.round(h * 0.5);
+      const sx = x + Math.round((w - sensorW) / 2);
+      const sy = y + Math.round((h - sensorH) / 2);
+      // Mount arm
       const mountX = onLeft ? x + ps : x + w - ps * 3;
-      ctx.fillStyle = '#2a2a46';
-      ctx.fillRect(mountX, dishCy - ps, w * 0.3, ps * 2);
-      // Dish body (pixelated circle)
-      for (let dy = -dishR; dy <= dishR; dy += ps) {
-        for (let dx = -dishR; dx <= dishR; dx += ps) {
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist <= dishR) {
-            ctx.fillStyle = dist < dishR * 0.3 ? '#5a5a78' : dist < dishR * 0.7 ? '#3e3e5a' : '#2a2a46';
-            ctx.fillRect(Math.round(dishCx + dx), Math.round(dishCy + dy), ps, ps);
-          }
-        }
-      }
-      // Center receiver
-      ctx.fillStyle = '#ff8c00';
-      ctx.fillRect(Math.round(dishCx - 1), Math.round(dishCy - 1), ps, ps);
+      ctx.fillStyle = '#2a2a30';
+      ctx.fillRect(mountX, sy + Math.round(sensorH / 2) - ps, w * 0.3, ps * 2);
+      // Sensor body
+      ctx.fillStyle = '#3a3a42';
+      ctx.fillRect(sx, sy, sensorW, sensorH);
+      // Panel lines
+      ctx.fillStyle = '#1a1a1e';
+      ctx.fillRect(sx, sy + Math.round(sensorH * 0.33), sensorW, 1);
+      ctx.fillRect(sx, sy + Math.round(sensorH * 0.66), sensorW, 1);
+      ctx.fillRect(sx + Math.round(sensorW * 0.5), sy, 1, sensorH);
+      // Top edge highlight
+      ctx.fillStyle = '#4a4a55';
+      ctx.fillRect(sx, sy, sensorW, 1);
+      // Small green status light
+      ctx.fillStyle = '#33ff44';
+      ctx.fillRect(sx + ps, sy + ps, ps, ps);
       break;
     }
     case 'machinery': {
-      // Complex machinery block with panel lines and vents
+      // Machinery block with panel grid and dark lines
       const panelRows = Math.max(2, Math.floor(h / (ps * 6)));
       const panelCols = Math.max(2, Math.floor(w / (ps * 6)));
       const pw = (w - ps * 2) / panelCols;
@@ -1191,40 +1191,43 @@ export function drawWallProtrusion(
         for (let c = 0; c < panelCols; c++) {
           const px2 = x + ps + c * pw;
           const py2 = y + ps + r * ph2;
-          const shade = ((r + c) % 2 === 0) ? '#252540' : '#2a2a48';
+          const shade = ((r + c) % 2 === 0) ? '#2a2a30' : '#3a3a42';
           ctx.fillStyle = shade;
           ctx.fillRect(Math.round(px2), Math.round(py2), Math.round(pw - 1), Math.round(ph2 - 1));
-          // Panel line
-          ctx.fillStyle = '#161630';
+          // Panel line (dark)
+          ctx.fillStyle = '#1a1a1e';
           ctx.fillRect(Math.round(px2 + pw - 1), Math.round(py2), 1, Math.round(ph2));
           ctx.fillRect(Math.round(px2), Math.round(py2 + ph2 - 1), Math.round(pw), 1);
         }
       }
-      // Status light
-      ctx.fillStyle = '#22cc44';
+      // Green status light
+      ctx.fillStyle = '#33ff44';
       ctx.fillRect(x + ps * 2, y + ps * 2, ps, ps);
-      // Small vent
-      ctx.fillStyle = '#0a0a1e';
+      // Small dark vent
+      ctx.fillStyle = '#101015';
       ctx.fillRect(x + w - ps * 5, y + h - ps * 4, ps * 3, ps * 2);
       break;
     }
     case 'vent': {
-      // Large vent grate
-      ctx.fillStyle = '#0a0a16';
+      // Large vent grate — dark opening
+      ctx.fillStyle = '#101015';
       ctx.fillRect(x + ps * 2, y + ps * 2, w - ps * 4, h - ps * 4);
       // Horizontal slats
       const slatCount = Math.max(3, Math.floor((h - ps * 4) / (ps * 3)));
       for (let i = 0; i < slatCount; i++) {
         const sy = y + ps * 2 + i * ((h - ps * 4) / slatCount);
-        ctx.fillStyle = '#2a2a44';
+        ctx.fillStyle = '#2a2a30';
         ctx.fillRect(x + ps * 2, Math.round(sy), w - ps * 4, ps);
       }
       // Frame
-      ctx.fillStyle = '#3a3a56';
+      ctx.fillStyle = '#3a3a42';
       ctx.fillRect(x + ps, y + ps, w - ps * 2, ps);
       ctx.fillRect(x + ps, y + h - ps * 2, w - ps * 2, ps);
       ctx.fillRect(x + ps, y + ps, ps, h - ps * 2);
       ctx.fillRect(x + w - ps * 2, y + ps, ps, h - ps * 2);
+      // Frame highlight on top edge
+      ctx.fillStyle = '#4a4a55';
+      ctx.fillRect(x + ps, y + ps, w - ps * 2, 1);
       break;
     }
   }
@@ -1241,59 +1244,52 @@ export function drawVerticalPipe(
   const ps = PS;
   ctx.save();
 
-  // Main pipe body — cylindrical shading
+  // Main pipe body — cylindrical shading (left lighter, right darker)
   const segments = Math.max(3, Math.floor(w / ps));
   for (let i = 0; i < segments; i++) {
     const sx = x + i * (w / segments);
     const sw = w / segments;
-    // Cylindrical gradient: dark edges, lighter center
+    // Cylindrical gradient: lighter on left, darker on right
     const t = i / (segments - 1);
-    const brightness = Math.round(20 + 30 * Math.sin(t * Math.PI));
-    ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness + 20})`;
+    const brightness = Math.round(30 + 35 * (1 - t));
+    ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness + 4})`;
     ctx.fillRect(Math.round(sx), y, Math.ceil(sw), h);
   }
 
-  // Highlight stripe (left of center)
-  ctx.fillStyle = '#4a4a66';
-  ctx.fillRect(x + Math.round(w * 0.35), y, ps, h);
+  // Highlight stripe (left side)
+  ctx.fillStyle = '#5a5a68';
+  ctx.fillRect(x + Math.round(w * 0.2), y, ps, h);
 
   // Dark edge lines
-  ctx.fillStyle = '#0e0e22';
+  ctx.fillStyle = '#101015';
   ctx.fillRect(x, y, ps, h);
   ctx.fillRect(x + w - ps, y, ps, h);
 
-  // Ring joints at regular intervals
+  // Ring joints every ~20px
   const ringSpacing = Math.max(20, h * 0.15);
   const ringOff = scrollOffset % ringSpacing;
   for (let ry = y - ringOff; ry < y + h; ry += ringSpacing) {
     if (ry < y - 4 || ry > y + h - ps * 2) continue;
-    ctx.fillStyle = '#3e3e5a';
+    ctx.fillStyle = '#3a3a42';
     ctx.fillRect(x - ps, Math.round(ry), w + ps * 2, ps * 2);
-    ctx.fillStyle = '#505070';
+    ctx.fillStyle = '#4a4a55';
     ctx.fillRect(x - ps, Math.round(ry), w + ps * 2, 1);
-    ctx.fillStyle = '#1a1a34';
+    ctx.fillStyle = '#1a1a1e';
     ctx.fillRect(x - ps, Math.round(ry) + ps * 2 - 1, w + ps * 2, 1);
     // Bolts on ring
-    ctx.fillStyle = '#585878';
+    ctx.fillStyle = '#5a5a68';
     ctx.fillRect(x + ps, Math.round(ry) + 1, ps, ps);
     ctx.fillRect(x + w - ps * 2, Math.round(ry) + 1, ps, ps);
   }
 
   // Top cap
-  ctx.fillStyle = '#3a3a56';
+  ctx.fillStyle = '#3a3a42';
   ctx.fillRect(x - ps, y, w + ps * 2, ps * 3);
-  ctx.fillStyle = '#505070';
+  ctx.fillStyle = '#4a4a55';
   ctx.fillRect(x - ps, y, w + ps * 2, ps);
-  // Warning light on top
-  const blink = Math.sin(scrollOffset * 0.12 + x * 0.05) > 0;
-  ctx.fillStyle = blink ? '#ff6600' : '#662200';
+  // Small green light at top
+  ctx.fillStyle = '#33ff44';
   ctx.fillRect(x + Math.round(w / 2) - ps, y - ps, ps * 2, ps);
-  if (blink) {
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = '#ff6600';
-    ctx.fillRect(x + Math.round(w / 2) - ps * 3, y - ps * 2, ps * 6, ps * 3);
-    ctx.globalAlpha = 1;
-  }
 
   ctx.restore();
 }
@@ -1506,8 +1502,8 @@ export function drawMillenniumFalcon(
   // Draw Falcon sprite image
   ensureSpritesLoaded();
   if (falconImg && falconLoadedFn && falconLoadedFn()) {
-    const imgW = falconImg.width * s * 0.8;
-    const imgH = falconImg.height * s * 0.8;
+    const imgW = falconImg.width * s * 0.45;
+    const imgH = falconImg.height * s * 0.45;
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(falconImg, Math.round(x - imgW / 2), Math.round(y - imgH / 2), Math.round(imgW), Math.round(imgH));
   } else {
