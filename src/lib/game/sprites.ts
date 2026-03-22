@@ -154,20 +154,22 @@ function drawImgSprite(
   x: number, y: number, scale: number,
   bank?: 'left' | 'right' | 'center'
 ) {
-  const dir = bank || 'center';
-  const img = sprites[dir];
-  const loaded = sprites.loaded[dir];
+  const img = sprites.center;
+  if (!sprites.loaded.center || !img.complete) return false;
 
-  if (loaded && img.complete) {
-    const w = img.width * scale * SPRITE_SCALE;
-    const h = img.height * scale * SPRITE_SCALE;
-    ctx.save();
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, x - w / 2, y - h / 2, w, h);
-    ctx.restore();
-    return true;
-  }
-  return false;
+  const w = img.width * scale * SPRITE_SCALE;
+  const h = img.height * scale * SPRITE_SCALE;
+
+  // Banking angle — subtle tilt
+  const bankAngle = bank === 'left' ? -0.15 : bank === 'right' ? 0.15 : 0;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(x, y);
+  if (bankAngle !== 0) ctx.rotate(bankAngle);
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  ctx.restore();
+  return true;
 }
 
 export function drawXWing(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, bank?: 'left' | 'right' | 'center') {
