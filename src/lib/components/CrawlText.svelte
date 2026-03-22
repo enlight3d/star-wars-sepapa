@@ -16,17 +16,19 @@
 </script>
 
 <div class="crawl-container">
-  <div class="crawl-perspective">
+  <div class="fade-top"></div>
+  <div class="crawl-viewport">
     <div class="crawl-content" bind:this={crawlEl}>
       {#each crawlText.split('\n') as line}
         {#if line.trim() === ''}
-          <br/>
+          <div class="spacer"></div>
         {:else}
           <p>{line}</p>
         {/if}
       {/each}
     </div>
   </div>
+  <div class="fade-bottom"></div>
 </div>
 
 <style>
@@ -36,38 +38,70 @@
     z-index: 10;
     overflow: hidden;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    perspective: 350px;
+    perspective-origin: 50% 40%;
   }
 
-  .crawl-perspective {
-    position: relative;
+  .crawl-viewport {
+    position: absolute;
+    bottom: 0;
     width: 80%;
-    max-width: 600px;
+    max-width: 550px;
     height: 100%;
-    perspective: 300px;
     overflow: hidden;
+    transform: rotateX(25deg);
+    transform-origin: 50% 100%;
   }
 
   .crawl-content {
     position: absolute;
-    top: 100%;
     width: 100%;
-    text-align: center;
-    transform-origin: 50% 100%;
-    transform: rotateX(25deg);
-    animation: crawl 35s linear forwards;
+    text-align: justify;
+    text-align-last: center;
+    animation: crawl 40s linear forwards;
   }
 
   .crawl-content p {
     color: var(--sw-yellow);
-    font-size: clamp(1rem, 3.5vw, 1.8rem);
+    font-size: clamp(1.1rem, 3.5vw, 2rem);
     font-weight: bold;
-    line-height: 1.8;
+    line-height: 1.7;
     margin: 0;
+    padding: 0 1rem;
+  }
+
+  .spacer {
+    height: 1.5em;
+  }
+
+  /* Fade edges for that cinematic disappearance */
+  .fade-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 25%;
+    background: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .fade-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 10%;
+    background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+    z-index: 2;
+    pointer-events: none;
   }
 
   @keyframes crawl {
-    from { top: 100%; }
-    to { top: -300%; }
+    0% { transform: translateY(100vh); }
+    100% { transform: translateY(-200%); }
   }
 </style>

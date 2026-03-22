@@ -5,19 +5,26 @@ export const contributors = [
 
 export const password = 'TBD'; // Will be provided
 
-export const crawlText = `Épisode XXXIII
+export const crawlText = `Épisode XXXI
 
 L'ANNIVERSAIRE D'ALEXIS
 
-La galaxie est en fête. Après des années
-de loyaux services à la tête de la flotte,
-le Commandant ALEXIS célèbre aujourd'hui
-une nouvelle année d'existence.
+La galaxie est en émoi. Le Commandant
+ALEXIS, leader incontesté de la flotte
+Eridanis, célèbre aujourd'hui son
+trente-et-unième cycle stellaire.
 
-Ses plus fidèles alliés ont uni leurs
-forces à travers la galaxie pour lui
-préparer une surprise de taille.
+Depuis son poste de commandement,
+il a guidé ses troupes à travers
+d'innombrables batailles, repoussant
+les limites de la technologie connue.
 
-Un projet secret, d'une envergure
-colossale, est sur le point de lui
-être révélé...`;
+Mais ses plus fidèles alliés ont
+secrètement uni leurs forces pour
+lui offrir un cadeau digne de
+son rang...
+
+Un projet d'envergure colossale,
+fruit de la contribution de neuf
+commandants de la flotte, est
+sur le point d'être révélé...`;

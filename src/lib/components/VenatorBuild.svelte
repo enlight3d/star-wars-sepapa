@@ -45,17 +45,23 @@
     let angle = 0;
 
     let venator: VenatorModel;
+    const loadStart = Date.now();
     try {
       venator = await loadVenator();
       scene.add(venator.root);
       totalBricks = venator.bricks.length;
-      showLoading = false;
 
       // Calculate camera distance based on model size
       const box = new THREE.Box3().setFromObject(venator.root);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       orbitRadius = maxDim * 0.9;
+
+      // Show loading screen for at least 2 seconds so user sees it
+      const elapsed = Date.now() - loadStart;
+      const remaining = Math.max(0, 2000 - elapsed);
+      await new Promise(r => setTimeout(r, remaining));
+      showLoading = false;
     } catch (err) {
       console.error('Failed to load Venator model:', err);
       showLoading = false;
@@ -216,8 +222,11 @@
 <style>
   .venator-scene { position: absolute; inset: 0; z-index: 10; }
   .loading {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    z-index: 20; text-align: center; color: var(--imperial-amber); font-family: monospace;
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 20; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; color: var(--imperial-amber); font-family: monospace;
+    background: #000005;
   }
   .loading-icon {
     display: flex; gap: 8px; justify-content: center; margin-bottom: 2rem;
