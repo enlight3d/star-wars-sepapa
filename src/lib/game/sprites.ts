@@ -434,7 +434,7 @@ export function drawTrenchWall(
     : (wallTextureRightLoaded && wallTextureRight ? wallTextureRight : (wallTextureLoaded && wallTexture ? wallTexture : null));
 
   if (tex) {
-    const tileSize = 128;
+    const tileSize = 256;
     const tileOffY = ((scrollOffset % tileSize) + tileSize) % tileSize;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
@@ -508,7 +508,7 @@ export function drawTrenchFloor(
   // 1. Tile the floor texture image across the floor area
   ensureTexturesLoaded();
   if (floorTextureLoaded && floorTexture) {
-    const tileSize = 128;
+    const tileSize = 256;
     const tileOffY = ((scrollOffset % tileSize) + tileSize) % tileSize;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
