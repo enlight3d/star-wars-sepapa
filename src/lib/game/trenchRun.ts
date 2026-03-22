@@ -1,10 +1,16 @@
 import type { Controls } from './controls';
-import { drawXWing, drawTIE, drawTurret, drawLaser, drawTrenchWall, drawTrenchFloor, drawExplosion } from './sprites';
-import { playLaserShoot, playEnemyLaser, playExplosion, playPlayerHit, playGameOver, playVictory } from '$lib/audio/audioManager';
+import {
+  drawXWing, drawTIE, drawTurret, drawLaser,
+  drawTrenchWall, drawTrenchFloor, drawExplosion,
+  drawPixelText, drawShieldIcon, drawTargetingReticle, drawExhaustPort
+} from './sprites';
+import {
+  playLaserShoot, playEnemyLaser, playExplosion,
+  playPlayerHit, playGameOver, playVictory
+} from '$lib/audio/audioManager';
 
 // ── Types ───────────────────────────────────────────────────────────
-interface Vec2 { x: number; y: number; }
-interface Entity extends Vec2 { w: number; h: number; }
+interface Entity { x: number; y: number; w: number; h: number; }
 interface Laser extends Entity { isEnemy: boolean; vy: number; vx: number; }
 interface TIEFighter extends Entity {
   speed: number;
@@ -14,6 +20,7 @@ interface TIEFighter extends Entity {
   baseX: number;
   fireTimer: number;
   hp: number;
+  fromBehind: boolean; // spawns from bottom, flies up
 }
 interface Turret extends Entity {
   facingRight: boolean;
@@ -21,8 +28,19 @@ interface Turret extends Entity {
   hp: number;
   aimAngle: number;
 }
+interface WallObstacle extends Entity {
+  onLeft: boolean;
+}
 interface Explosion { x: number; y: number; frame: number; maxFrames: number; big: boolean; }
-interface Star { x: number; y: number; brightness: number; speed: number; twinklePhase: number; twinkleSpeed: number; }
+
+interface RadioMessage {
+  speaker: string;
+  text: string;
+  startTime: number;
+  duration: number;
+  charIndex: number;
+  charTimer: number;
+}
 
 export interface GameState {
   running: boolean;
@@ -36,18 +54,16 @@ export interface GameState {
   combo: number;
   bestCombo: number;
   noHitStreak: number;
+  phase: number;
 }
 
 // ── Constants ───────────────────────────────────────────────────────
-const DURATION = 35; // DEBUG: change to 35 for production
+const DURATION = 50;
+const MAX_HP = 5;
 const PLAYER_SPEED = 4.5;
-const SCROLL_SPEED = 130; // pixels per second
 const FIRE_COOLDOWN = 0.16;
 const PLAYER_LASER_SPEED = 500;
 const ENEMY_LASER_SPEED = 220;
-const TIE_SPAWN_INTERVAL_START = 2.0;
-const TIE_SPAWN_INTERVAL_END = 0.6;
-const TURRET_SPAWN_INTERVAL = 3.5;
 const TURRET_FIRE_INTERVAL = 2.2;
 const TIE_FIRE_INTERVAL = 1.8;
 const INVINCIBILITY_DURATION = 0.6;
@@ -56,8 +72,35 @@ const BIG_EXPLOSION_FRAMES = 28;
 const SCREEN_SHAKE_DURATION = 0.3;
 const SCREEN_SHAKE_INTENSITY = 6;
 const BIG_SHAKE_INTENSITY = 12;
-const BOSS_WAVE_TIME = DURATION - 5; // Boss wave starts 5 seconds before end
-const COMBO_TIMEOUT = 2.0; // seconds to maintain combo
+const COMBO_TIMEOUT = 2.0;
+
+// Phase timing
+const PHASE1_INTRO_DURATION = 2.5;
+const PHASE1_GAMEPLAY_DURATION = 15;
+const PHASE2_INTRO_DURATION = 2.5;
+const PHASE2_GAMEPLAY_DURATION = 20;
+const PHASE3_INTRO_DURATION = 2.5;
+const PHASE3_GAMEPLAY_DURATION = 15;
+
+const PHASE1_START = 0;
+const PHASE1_GAMEPLAY_START = PHASE1_INTRO_DURATION;
+const PHASE1_END = PHASE1_INTRO_DURATION + PHASE1_GAMEPLAY_DURATION;
+
+const PHASE2_START = PHASE1_END;
+const PHASE2_GAMEPLAY_START = PHASE2_START + PHASE2_INTRO_DURATION;
+const PHASE2_END = PHASE2_START + PHASE2_INTRO_DURATION + PHASE2_GAMEPLAY_DURATION;
+
+const PHASE3_START = PHASE2_END;
+const PHASE3_GAMEPLAY_START = PHASE3_START + PHASE3_INTRO_DURATION;
+const PHASE3_END = PHASE3_START + PHASE3_INTRO_DURATION + PHASE3_GAMEPLAY_DURATION;
+
+// Radio messages (timed)
+const RADIO_MESSAGES: { time: number; speaker: string; text: string; duration: number }[] = [
+  { time: PHASE1_START, speaker: 'RED LEADER', text: 'Restez en formation, approche de la tranchee...', duration: PHASE1_INTRO_DURATION },
+  { time: PHASE2_START, speaker: 'WEDGE', text: 'Des chasseurs TIE derriere nous !', duration: PHASE2_INTRO_DURATION },
+  { time: PHASE2_GAMEPLAY_START + 15, speaker: 'BIGGS', text: 'Je ne peux pas les semer !', duration: 3 },
+  { time: PHASE3_START, speaker: 'OBI-WAN', text: 'Utilise la Force, Alexis...', duration: PHASE3_INTRO_DURATION },
+];
 
 export function createTrenchRun(
   canvas: HTMLCanvasElement,
@@ -67,9 +110,6 @@ export function createTrenchRun(
   const ctx = canvas.getContext('2d')!;
   let animId: number;
   let lastTime = 0;
-  let tieSpawnTimer = 0;
-  let turretSpawnTimer = 0;
-  let bossWaveSpawned = false;
 
   const cw = canvas.width;
   const ch = canvas.height;
@@ -77,23 +117,39 @@ export function createTrenchRun(
 
   // Trench geometry
   const trenchMarginBase = cw * 0.15;
-  const trenchNarrowAmount = cw * 0.04;
 
   function getTrenchBounds(elapsed: number) {
-    const progress = Math.min(elapsed / DURATION, 1);
-    const narrow = trenchNarrowAmount * progress;
+    // Phase 3: trench narrows significantly
+    let narrow = 0;
+    if (elapsed >= PHASE3_GAMEPLAY_START) {
+      const p3progress = Math.min((elapsed - PHASE3_GAMEPLAY_START) / PHASE3_GAMEPLAY_DURATION, 1);
+      narrow = cw * 0.08 * p3progress;
+    }
     return {
       left: trenchMarginBase + narrow * 0.5,
       right: cw - trenchMarginBase - narrow * 0.5
     };
   }
 
-  const MAX_HP = 5;
+  function getScrollSpeed(elapsed: number): number {
+    if (elapsed < PHASE2_GAMEPLAY_START) return 130;
+    if (elapsed < PHASE3_GAMEPLAY_START) return 160;
+    // Phase 3: accelerating
+    const p3progress = Math.min((elapsed - PHASE3_GAMEPLAY_START) / PHASE3_GAMEPLAY_DURATION, 1);
+    return 180 + p3progress * 80;
+  }
+
   const state: GameState = {
     running: true, score: 0, completed: false, elapsed: 0,
     hp: MAX_HP, maxHp: MAX_HP, gameOver: false,
-    kills: 0, combo: 0, bestCombo: 0, noHitStreak: 0
+    kills: 0, combo: 0, bestCombo: 0, noHitStreak: 0,
+    phase: 1
   };
+
+  // Checkpoint state for restart
+  let checkpointPhase = 1;
+  let checkpointScore = 0;
+  let checkpointKills = 0;
 
   // Player
   const initBounds = getTrenchBounds(0);
@@ -112,47 +168,98 @@ export function createTrenchRun(
 
   const ties: TIEFighter[] = [];
   const turrets: Turret[] = [];
+  const obstacles: WallObstacle[] = [];
   const lasers: Laser[] = [];
   const explosions: Explosion[] = [];
-  const stars: Star[] = [];
   let fireCooldown = 0;
   let scrollOffset = 0;
   let screenShakeTimer = 0;
   let screenShakeIntensity = SCREEN_SHAKE_INTENSITY;
-  let endFadeAlpha = 0;
-  let endShowMessage = false;
-  let endTriggered = false;
   let comboTimer = 0;
   let lastKillTime = 0;
 
-  // Init stars (twinkling)
-  for (let i = 0; i < 80; i++) {
-    stars.push({
-      x: trenchMarginBase + Math.random() * (cw - trenchMarginBase * 2),
-      y: Math.random() * ch,
-      brightness: 0.2 + Math.random() * 0.8,
-      speed: 15 + Math.random() * 35,
-      twinklePhase: Math.random() * Math.PI * 2,
-      twinkleSpeed: 1 + Math.random() * 3
-    });
+  // Phase management
+  let currentPhase = 0; // 0 = not started yet, 1-3 during gameplay
+  let phaseIntroActive = false;
+  let inGameplay = false;
+
+  // Turret spawning
+  let turretSpawnTimer = 0;
+  const TURRET_SPAWN_INTERVAL = 3.5;
+
+  // TIE spawning
+  let tieSpawnTimer = 0;
+
+  // Obstacle spawning
+  let obstacleSpawnTimer = 0;
+
+  // Radio messages
+  let activeRadio: RadioMessage | null = null;
+  let shownRadioIndices: Set<number> = new Set();
+
+  // Phase 3: targeting computer
+  let targetingProgress = 0;
+  let exhaustPortY = -50;
+  let exhaustPortSize = 8;
+
+  // Victory sequence
+  let victoryTriggered = false;
+  let victoryTimer = 0;
+  let victoryFlashAlpha = 0;
+  let victoryTextShown = false;
+
+  // Bullet-time
+  let bulletTimeActive = false;
+  let bulletTimeFactor = 1;
+
+  // ── Helpers ────────────────────────────────────────────────────────
+
+  function isInIntro(elapsed: number): boolean {
+    return (
+      (elapsed >= PHASE1_START && elapsed < PHASE1_GAMEPLAY_START) ||
+      (elapsed >= PHASE2_START && elapsed < PHASE2_GAMEPLAY_START) ||
+      (elapsed >= PHASE3_START && elapsed < PHASE3_GAMEPLAY_START)
+    );
+  }
+
+  function getCurrentPhase(elapsed: number): number {
+    if (elapsed < PHASE2_START) return 1;
+    if (elapsed < PHASE3_START) return 2;
+    return 3;
+  }
+
+  function getPhaseStartTime(phase: number): number {
+    if (phase === 1) return PHASE1_START;
+    if (phase === 2) return PHASE2_START;
+    return PHASE3_START;
+  }
+
+  function getPhaseGameplayStart(phase: number): number {
+    if (phase === 1) return PHASE1_GAMEPLAY_START;
+    if (phase === 2) return PHASE2_GAMEPLAY_START;
+    return PHASE3_GAMEPLAY_START;
   }
 
   // ── Spawn helpers ─────────────────────────────────────────────────
-  function spawnTIE(overrideX?: number) {
+  function spawnTIE(fromBehind: boolean = false) {
     const bounds = getTrenchBounds(state.elapsed);
     const margin = 30 * scale;
-    const spawnX = overrideX ?? (bounds.left + margin + Math.random() * (bounds.right - bounds.left - margin * 2));
-    const progress = Math.min(state.elapsed / DURATION, 1);
+    const spawnX = bounds.left + margin + Math.random() * (bounds.right - bounds.left - margin * 2);
+    const phase = getCurrentPhase(state.elapsed);
+    const speedMult = phase === 3 ? 1.4 : phase === 2 ? 1.1 : 1;
+
     ties.push({
-      x: spawnX, y: -35 * scale,
+      x: spawnX,
+      y: fromBehind ? ch + 40 * scale : -35 * scale,
       w: 35 * scale, h: 35 * scale,
-      speed: (70 + Math.random() * 50) * (1 + progress * 0.4),
+      speed: (fromBehind ? -(80 + Math.random() * 40) : (70 + Math.random() * 50)) * speedMult,
       sineOffset: Math.random() * Math.PI * 2,
       sineSpeed: 1.5 + Math.random() * 2.5,
       sineAmplitude: 20 + Math.random() * 35,
       baseX: spawnX,
       fireTimer: 0.8 + Math.random() * TIE_FIRE_INTERVAL,
-      hp: 1
+      hp: 1,
+      fromBehind
     });
   }
 
@@ -172,23 +279,22 @@ export function createTrenchRun(
     });
   }
 
-  function spawnBossWave() {
-    if (bossWaveSpawned) return;
-    bossWaveSpawned = true;
+  function spawnObstacle() {
     const bounds = getTrenchBounds(state.elapsed);
-    const trenchW = bounds.right - bounds.left;
-
-    // V-formation: 5 TIEs
-    const positions = [0, -0.3, 0.3, -0.55, 0.55];
-    const center = (bounds.left + bounds.right) / 2;
-    for (let i = 0; i < positions.length; i++) {
-      const tx = center + positions[i] * trenchW * 0.35;
-      setTimeout(() => spawnTIE(tx), i * 200);
-    }
+    const onLeft = Math.random() > 0.5;
+    const obsW = 15 + Math.random() * 25;
+    const obsH = 8 + Math.random() * 12;
+    obstacles.push({
+      x: onLeft ? bounds.left : bounds.right - obsW * scale,
+      y: -obsH * scale,
+      w: obsW * scale,
+      h: obsH * scale,
+      onLeft
+    });
   }
 
   // ── Collision ─────────────────────────────────────────────────────
-  function collides(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }): boolean {
+  function collides(a: Entity, b: Entity): boolean {
     return (
       a.x - a.w / 2 < b.x + b.w / 2 &&
       a.x + a.w / 2 > b.x - b.w / 2 &&
@@ -197,7 +303,7 @@ export function createTrenchRun(
     );
   }
 
-  function playerHitbox() {
+  function playerHitbox(): Entity {
     return { x: player.x, y: player.y, w: player.hitW, h: player.hitH };
   }
 
@@ -211,16 +317,10 @@ export function createTrenchRun(
     }
     lastKillTime = now;
     if (state.combo > state.bestCombo) state.bestCombo = state.combo;
-
-    // Combo bonus
     const comboMultiplier = Math.min(state.combo, 5);
     state.score += points * comboMultiplier;
     comboTimer = 2.0;
-
-    // No-hit streak bonus: +50 per kill while unhit
-    if (state.noHitStreak > 0) {
-      state.score += 50;
-    }
+    if (state.noHitStreak > 0) state.score += 50;
     state.noHitStreak++;
   }
 
@@ -242,44 +342,100 @@ export function createTrenchRun(
 
   // ── Update ────────────────────────────────────────────────────────
   function update(dt: number) {
-    state.elapsed += dt;
+    // Apply bullet-time
+    const effectiveDt = dt * bulletTimeFactor;
 
-    // Boss wave
-    if (state.elapsed >= BOSS_WAVE_TIME && !bossWaveSpawned && !endTriggered) {
-      spawnBossWave();
+    state.elapsed += effectiveDt;
+    state.phase = getCurrentPhase(state.elapsed);
+
+    // Save checkpoint at phase transitions
+    if (state.phase > checkpointPhase) {
+      checkpointPhase = state.phase;
+      checkpointScore = state.score;
+      checkpointKills = state.kills;
     }
 
-    // End sequence
-    if (state.elapsed >= DURATION && !endTriggered) {
-      endTriggered = true;
+    // Check for intro vs gameplay
+    phaseIntroActive = isInIntro(state.elapsed);
+    inGameplay = !phaseIntroActive && state.elapsed < PHASE3_END;
+
+    // Update radio messages
+    for (let i = 0; i < RADIO_MESSAGES.length; i++) {
+      const rm = RADIO_MESSAGES[i];
+      if (state.elapsed >= rm.time && state.elapsed < rm.time + rm.duration && !shownRadioIndices.has(i)) {
+        shownRadioIndices.add(i);
+        activeRadio = {
+          speaker: rm.speaker,
+          text: rm.text,
+          startTime: state.elapsed,
+          duration: rm.duration,
+          charIndex: 0,
+          charTimer: 0
+        };
+      }
+    }
+
+    // Update active radio typewriter
+    if (activeRadio) {
+      activeRadio.charTimer += dt; // use real dt for typewriter
+      const charsPerSecond = 30;
+      activeRadio.charIndex = Math.min(
+        Math.floor(activeRadio.charTimer * charsPerSecond),
+        activeRadio.text.length
+      );
+      if (state.elapsed > activeRadio.startTime + activeRadio.duration) {
+        activeRadio = null;
+      }
+    }
+
+    // Victory sequence
+    if (state.elapsed >= PHASE3_END && !victoryTriggered) {
+      victoryTriggered = true;
+      bulletTimeActive = false;
+      bulletTimeFactor = 1;
       playVictory();
     }
-    if (endTriggered) {
-      endFadeAlpha = Math.min(endFadeAlpha + dt * 1.5, 0.85);
-      if (endFadeAlpha >= 0.5 && !endShowMessage) {
-        endShowMessage = true;
-      }
-      if (endFadeAlpha >= 0.85 && !state.completed) {
+
+    if (victoryTriggered) {
+      victoryTimer += dt;
+      if (victoryTimer < 0.5) {
+        // Flash white
+        victoryFlashAlpha = Math.min(victoryTimer / 0.3, 1);
+      } else if (victoryTimer < 2) {
+        victoryFlashAlpha = Math.max(1 - (victoryTimer - 0.5) / 0.5, 0);
+        victoryTextShown = true;
+      } else if (victoryTimer < 4) {
+        victoryFlashAlpha = 0;
+      } else if (!state.completed) {
         state.completed = true;
         state.running = false;
-        setTimeout(onComplete, 2000);
+        setTimeout(onComplete, 500);
       }
       return;
     }
 
+    // During intros, minimal updates
+    if (phaseIntroActive) {
+      scrollOffset += 60 * effectiveDt; // slow scroll during intros
+      return;
+    }
+
+    if (!inGameplay) return;
+
+    const scrollSpeed = getScrollSpeed(state.elapsed);
     const bounds = getTrenchBounds(state.elapsed);
-    scrollOffset += SCROLL_SPEED * dt;
+    scrollOffset += scrollSpeed * effectiveDt;
 
     // Timers
-    player.invincibleTimer = Math.max(0, player.invincibleTimer - dt);
+    player.invincibleTimer = Math.max(0, player.invincibleTimer - effectiveDt);
     player.flashPhase += dt * 20;
-    screenShakeTimer = Math.max(0, screenShakeTimer - dt);
-    fireCooldown = Math.max(0, fireCooldown - dt);
-    comboTimer = Math.max(0, comboTimer - dt);
+    screenShakeTimer = Math.max(0, screenShakeTimer - effectiveDt);
+    fireCooldown = Math.max(0, fireCooldown - effectiveDt);
+    comboTimer = Math.max(0, comboTimer - effectiveDt);
     if (comboTimer <= 0) state.combo = 0;
 
     // Player movement
-    const moveSpeed = PLAYER_SPEED * 60 * dt * scale;
+    const moveSpeed = PLAYER_SPEED * 60 * effectiveDt * scale;
     if (controls.left) player.x -= moveSpeed;
     if (controls.right) player.x += moveSpeed;
     if (controls.up) player.y -= moveSpeed;
@@ -291,7 +447,7 @@ export function createTrenchRun(
     player.x = Math.max(bounds.left + padX, Math.min(bounds.right - padX, player.x));
     player.y = Math.max(padY + 10, Math.min(ch - padY - 20, player.y));
 
-    // Fire — dual green lasers from upper wing tips
+    // Fire
     if (controls.fire && fireCooldown <= 0) {
       const offsets = [
         { x: -22 * scale, y: -20 * scale },
@@ -308,44 +464,88 @@ export function createTrenchRun(
       playLaserShoot();
     }
 
-    // Spawn enemies (difficulty ramp)
-    const progress = state.elapsed / DURATION;
-    const tieInterval = TIE_SPAWN_INTERVAL_START + (TIE_SPAWN_INTERVAL_END - TIE_SPAWN_INTERVAL_START) * progress;
-    tieSpawnTimer += dt;
-    if (tieSpawnTimer > tieInterval) {
-      tieSpawnTimer = 0;
-      spawnTIE();
-      if (progress > 0.4 && Math.random() > 0.5) spawnTIE();
-      if (progress > 0.7 && Math.random() > 0.6) spawnTIE();
-    }
+    // ── Phase-specific spawning ──
 
-    turretSpawnTimer += dt;
-    if (turretSpawnTimer > TURRET_SPAWN_INTERVAL * (1 - progress * 0.3)) {
+    const phase = state.phase;
+
+    // Turret spawning (phases 1-3)
+    turretSpawnTimer += effectiveDt;
+    const turretInterval = phase === 3 ? 2.5 : phase === 2 ? 3.0 : TURRET_SPAWN_INTERVAL;
+    if (turretSpawnTimer > turretInterval) {
       turretSpawnTimer = 0;
       spawnTurret();
     }
 
+    // Obstacle spawning (phases 1-3, more frequent in phase 2-3)
+    obstacleSpawnTimer += effectiveDt;
+    const obsInterval = phase === 3 ? 1.5 : phase === 2 ? 2.5 : 3.5;
+    if (obstacleSpawnTimer > obsInterval) {
+      obstacleSpawnTimer = 0;
+      spawnObstacle();
+    }
+
+    // TIE spawning (phase 2-3 only)
+    if (phase >= 2) {
+      tieSpawnTimer += effectiveDt;
+      const phaseProgress = phase === 2
+        ? (state.elapsed - PHASE2_GAMEPLAY_START) / PHASE2_GAMEPLAY_DURATION
+        : (state.elapsed - PHASE3_GAMEPLAY_START) / PHASE3_GAMEPLAY_DURATION;
+      const tieInterval = phase === 3 ? 3.0 : Math.max(0.8, 2.0 - phaseProgress * 1.2);
+      if (tieSpawnTimer > tieInterval) {
+        tieSpawnTimer = 0;
+        // Phase 2: TIEs come from behind sometimes
+        const fromBehind = phase === 2 && Math.random() > 0.4;
+        spawnTIE(fromBehind);
+        // Extra TIE at higher intensity
+        if (phaseProgress > 0.5 && Math.random() > 0.5) {
+          spawnTIE(!fromBehind);
+        }
+      }
+    }
+
+    // Phase 3: targeting computer + exhaust port
+    if (phase === 3) {
+      const p3progress = (state.elapsed - PHASE3_GAMEPLAY_START) / PHASE3_GAMEPLAY_DURATION;
+      targetingProgress = Math.min(p3progress, 1);
+
+      // Exhaust port moves down from top
+      exhaustPortY = -20 + p3progress * (ch * 0.3 + 20);
+      exhaustPortSize = 8 + p3progress * 20;
+
+      // Bullet-time near the end
+      if (p3progress > 0.85 && !bulletTimeActive) {
+        bulletTimeActive = true;
+      }
+      if (bulletTimeActive) {
+        bulletTimeFactor = Math.max(0.2, 1 - (p3progress - 0.85) / 0.15 * 0.8);
+      }
+    }
+
+    // ── Update entities ──
+
     // Update TIEs
     for (const tie of ties) {
-      tie.y += tie.speed * dt;
-      tie.sineOffset += tie.sineSpeed * dt;
+      tie.y += tie.speed * effectiveDt;
+      tie.sineOffset += tie.sineSpeed * effectiveDt;
       tie.baseX = Math.max(bounds.left + 20 * scale, Math.min(bounds.right - 20 * scale, tie.baseX));
       tie.x = tie.baseX + Math.sin(tie.sineOffset) * tie.sineAmplitude * scale;
       tie.x = Math.max(bounds.left + 18 * scale, Math.min(bounds.right - 18 * scale, tie.x));
 
       // Fire at player
-      tie.fireTimer -= dt;
-      if (tie.fireTimer <= 0 && tie.y > 0 && tie.y < ch * 0.65) {
-        tie.fireTimer = TIE_FIRE_INTERVAL * (1 - progress * 0.3) + Math.random() * 0.5;
+      tie.fireTimer -= effectiveDt;
+      if (tie.fireTimer <= 0 && tie.y > 0 && tie.y < ch) {
+        tie.fireTimer = TIE_FIRE_INTERVAL * 0.8 + Math.random() * 0.5;
         const dx = player.x - tie.x;
         const dy = player.y - tie.y;
         const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
         const vx = (dx / dist) * ENEMY_LASER_SPEED * 0.35;
         const vy = (dy / dist) * ENEMY_LASER_SPEED;
         lasers.push({
-          x: tie.x, y: tie.y + 17 * scale,
+          x: tie.x, y: tie.y + (tie.fromBehind ? -17 * scale : 17 * scale),
           w: 4, h: 12,
-          isEnemy: true, vy: Math.max(vy, ENEMY_LASER_SPEED * 0.5), vx
+          isEnemy: true,
+          vy: tie.fromBehind ? Math.min(vy, -ENEMY_LASER_SPEED * 0.5) : Math.max(vy, ENEMY_LASER_SPEED * 0.5),
+          vx
         });
         playEnemyLaser();
       }
@@ -353,8 +553,7 @@ export function createTrenchRun(
 
     // Update turrets
     for (const turret of turrets) {
-      turret.y += SCROLL_SPEED * dt;
-      // Stick to wall
+      turret.y += scrollSpeed * effectiveDt;
       const tb = getTrenchBounds(state.elapsed);
       if (turret.facingRight) {
         turret.x = tb.left - turret.w * 0.3;
@@ -362,18 +561,17 @@ export function createTrenchRun(
         turret.x = tb.right - turret.w * 0.7;
       }
 
-      // Calculate aim angle toward player
       const tcx = turret.x + turret.w / 2;
       const tcy = turret.y + turret.h / 2;
       const dx = player.x - tcx;
       const dy = player.y - tcy;
       turret.aimAngle = Math.atan2(dy, turret.facingRight ? dx : -dx);
 
-      // Fire
-      turret.fireTimer -= dt;
+      turret.fireTimer -= effectiveDt;
       if (turret.fireTimer <= 0 && turret.y > 0 && turret.y < ch) {
-        turret.fireTimer = TURRET_FIRE_INTERVAL * (1 - progress * 0.2);
+        turret.fireTimer = TURRET_FIRE_INTERVAL * 0.9;
         const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+        // Turrets fire green bolts (turbolaser)
         lasers.push({
           x: tcx + (turret.facingRight ? turret.w * 0.6 : -turret.w * 0.6),
           y: tcy,
@@ -386,24 +584,20 @@ export function createTrenchRun(
       }
     }
 
-    // Update lasers
-    for (const l of lasers) {
-      l.y += l.vy * dt;
-      l.x += l.vx * dt;
+    // Update obstacles (scroll down)
+    for (const obs of obstacles) {
+      obs.y += scrollSpeed * effectiveDt;
     }
 
-    // Update stars (twinkling + scrolling)
-    for (const star of stars) {
-      star.y += star.speed * dt;
-      star.twinklePhase += star.twinkleSpeed * dt;
-      if (star.y > ch) {
-        star.y = -2;
-        const b = getTrenchBounds(state.elapsed);
-        star.x = b.left + Math.random() * (b.right - b.left);
-      }
+    // Update lasers
+    for (const l of lasers) {
+      l.y += l.vy * effectiveDt;
+      l.x += l.vx * effectiveDt;
     }
 
     // ── Collisions ──
+
+    const ph = playerHitbox();
 
     // Player lasers vs TIEs
     for (let i = lasers.length - 1; i >= 0; i--) {
@@ -447,7 +641,6 @@ export function createTrenchRun(
     }
 
     // Enemy lasers vs player
-    const ph = playerHitbox();
     for (let i = lasers.length - 1; i >= 0; i--) {
       if (!lasers[i] || !lasers[i].isEnemy) continue;
       if (collides(lasers[i], ph)) {
@@ -469,16 +662,29 @@ export function createTrenchRun(
       }
     }
 
+    // Obstacle vs player
+    for (const obs of obstacles) {
+      // Obstacle hitbox uses center-based collision
+      const obsCx = obs.x + obs.w / 2;
+      const obsCy = obs.y + obs.h / 2;
+      if (collides(ph, { x: obsCx, y: obsCy, w: obs.w * 0.8, h: obs.h * 0.8 })) {
+        hitPlayer();
+      }
+    }
+
     // Cleanup off-screen
     for (let i = lasers.length - 1; i >= 0; i--) {
       const l = lasers[i];
       if (l.y < -30 || l.y > ch + 30 || l.x < -30 || l.x > cw + 30) lasers.splice(i, 1);
     }
     for (let i = ties.length - 1; i >= 0; i--) {
-      if (ties[i].y > ch + 60) ties.splice(i, 1);
+      if (ties[i].fromBehind ? ties[i].y < -60 : ties[i].y > ch + 60) ties.splice(i, 1);
     }
     for (let i = turrets.length - 1; i >= 0; i--) {
       if (turrets[i].y > ch + 60) turrets.splice(i, 1);
+    }
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      if (obstacles[i].y > ch + 60) obstacles.splice(i, 1);
     }
 
     // Update explosions
@@ -510,26 +716,26 @@ export function createTrenchRun(
     // Trench floor with grid
     drawTrenchFloor(ctx, bounds.left, bounds.right, ch, scrollOffset);
 
-    // Stars (twinkling) — only in trench area
-    for (const star of stars) {
-      if (star.x < bounds.left || star.x > bounds.right) continue;
-      const twinkle = 0.4 + 0.6 * Math.abs(Math.sin(star.twinklePhase));
-      ctx.globalAlpha = star.brightness * twinkle * 0.7;
-      ctx.fillStyle = '#ffffff';
-      const sz = star.brightness > 0.7 ? 2 : 1.2;
-      ctx.fillRect(star.x - sz / 2, star.y - sz / 2, sz, sz);
-      // Bright stars get a subtle cross
-      if (star.brightness > 0.85 && twinkle > 0.8) {
-        ctx.globalAlpha = star.brightness * twinkle * 0.2;
-        ctx.fillRect(star.x - 3, star.y - 0.3, 6, 0.6);
-        ctx.fillRect(star.x - 0.3, star.y - 3, 0.6, 6);
-      }
-    }
-    ctx.globalAlpha = 1;
-
     // Trench walls
     drawTrenchWall(ctx, 0, 0, bounds.left, ch, scrollOffset);
     drawTrenchWall(ctx, bounds.right, 0, cw - bounds.right, ch, scrollOffset);
+
+    // Wall obstacles
+    for (const obs of obstacles) {
+      ctx.fillStyle = '#222238';
+      ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+      // Pixel detail
+      ctx.fillStyle = '#2a2a44';
+      ctx.fillRect(obs.x + 2, obs.y + 2, obs.w - 4, 2);
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(obs.x + 2, obs.y + obs.h - 4, obs.w - 4, 2);
+    }
+
+    // Phase 3: Exhaust port
+    if (state.phase === 3 && state.elapsed >= PHASE3_GAMEPLAY_START) {
+      const trenchCx = (bounds.left + bounds.right) / 2;
+      drawExhaustPort(ctx, trenchCx, exhaustPortY, exhaustPortSize, state.elapsed);
+    }
 
     // Turrets
     for (const t of turrets) {
@@ -557,226 +763,188 @@ export function createTrenchRun(
       drawExplosion(ctx, e.x, e.y, e.frame, e.maxFrames, e.big);
     }
 
+    // Phase 3: Targeting reticle overlay
+    if (state.phase === 3 && state.elapsed >= PHASE3_GAMEPLAY_START && !victoryTriggered) {
+      const trenchCx = (bounds.left + bounds.right) / 2;
+      const reticleSize = Math.min(bounds.right - bounds.left, ch) * 0.35;
+      drawTargetingReticle(ctx, trenchCx, ch * 0.3, reticleSize, targetingProgress, state.elapsed);
+    }
+
     // ── HUD ────────────────────────────────────────────────────────
 
-    const fontSize = Math.round(14 * (cw / 400));
-    const smallFont = Math.round(10 * (cw / 400));
+    const hudPixelSize = Math.max(1, Math.round(scale * 1.5));
 
-    // Score — top-left
-    ctx.fillStyle = '#ffd700';
-    ctx.font = `bold ${fontSize}px monospace`;
-    ctx.textAlign = 'left';
-    ctx.shadowColor = '#ffd700';
-    ctx.shadowBlur = 4;
-    ctx.fillText(`SCORE: ${state.score}`, 10, 22);
-    ctx.shadowBlur = 0;
+    // Score — top-left (gold pixel text)
+    drawPixelText(ctx, `SCORE:${state.score}`, 8, 8, '#ffd700', hudPixelSize);
 
     // Kill counter below score
-    ctx.fillStyle = '#aaa';
-    ctx.font = `${smallFont}px monospace`;
-    ctx.fillText(`KILLS: ${state.kills}`, 10, 38);
+    drawPixelText(ctx, `KILLS:${state.kills}`, 8, 8 + hudPixelSize * 9, '#aaaaaa', Math.max(1, hudPixelSize - 1));
 
     // Combo indicator
     if (state.combo > 1 && comboTimer > 0) {
-      const comboAlpha = Math.min(comboTimer, 1);
-      ctx.globalAlpha = comboAlpha;
-      ctx.fillStyle = state.combo >= 5 ? '#ff4444' : state.combo >= 3 ? '#ff8800' : '#ffcc00';
-      ctx.font = `bold ${Math.round(18 * (cw / 400))}px monospace`;
-      ctx.fillText(`x${state.combo} COMBO!`, 10, 56);
+      ctx.globalAlpha = Math.min(comboTimer, 1);
+      const comboColor = state.combo >= 5 ? '#ff4444' : state.combo >= 3 ? '#ff8800' : '#ffcc00';
+      drawPixelText(ctx, `x${state.combo} COMBO!`, 8, 8 + hudPixelSize * 18, comboColor, hudPixelSize);
       ctx.globalAlpha = 1;
     }
 
-    // Shield bar — top-right
-    const hpBarW = 80 * (cw / 400);
-    const hpBarH = 10;
-    const hpBarX = cw - hpBarW - 10;
-    const hpBarY = 14;
+    // Phase indicator — top-center
+    drawPixelText(ctx, `PHASE ${state.phase}/3`, cw / 2, 8, '#4fc3f7', hudPixelSize, 'center');
 
-    // Label
-    ctx.fillStyle = '#aaa';
-    ctx.font = `${smallFont}px monospace`;
-    ctx.textAlign = 'right';
-    ctx.fillText('BOUCLIER', hpBarX - 5, hpBarY + hpBarH - 1);
-
-    // Bar background
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(hpBarX, hpBarY, hpBarW, hpBarH);
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(hpBarX, hpBarY, hpBarW, hpBarH);
-
-    // Bar fill with color coding
-    const hpRatio = state.hp / state.maxHp;
-    const hpColor = hpRatio > 0.5 ? '#00e676' : hpRatio > 0.25 ? '#ff8f00' : '#ff1744';
-    ctx.fillStyle = hpColor;
-    ctx.fillRect(hpBarX + 1, hpBarY + 1, (hpBarW - 2) * hpRatio, hpBarH - 2);
-
-    // Shield segments
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-    const segW = (hpBarW - 2) / state.maxHp;
-    for (let i = 1; i < state.maxHp; i++) {
-      const sx = hpBarX + 1 + segW * i;
-      ctx.beginPath();
-      ctx.moveTo(sx, hpBarY + 1);
-      ctx.lineTo(sx, hpBarY + hpBarH - 1);
-      ctx.stroke();
+    // Shield icons — top-right
+    const shieldIconSize = hudPixelSize * 6;
+    const shieldStartX = cw - 8 - state.maxHp * (shieldIconSize + 3);
+    for (let i = 0; i < state.maxHp; i++) {
+      drawShieldIcon(
+        ctx,
+        shieldStartX + i * (shieldIconSize + 3),
+        8,
+        shieldIconSize,
+        i < state.hp
+      );
     }
 
-    // Shield glow when low
-    if (hpRatio <= 0.25 && state.hp > 0) {
-      ctx.strokeStyle = '#ff1744';
-      ctx.shadowColor = '#ff1744';
-      ctx.shadowBlur = 6;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(hpBarX - 1, hpBarY - 1, hpBarW + 2, hpBarH + 2);
-      ctx.shadowBlur = 0;
+    // Radio message bar — bottom
+    if (activeRadio) {
+      // Semi-transparent black bar
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      const barH = hudPixelSize * 20;
+      ctx.fillRect(0, ch - barH, cw, barH);
+      // Border top
+      ctx.fillStyle = '#333344';
+      ctx.fillRect(0, ch - barH, cw, 2);
+
+      // Speaker name
+      const speakerColor = '#4fc3f7';
+      drawPixelText(ctx, `${activeRadio.speaker}:`, 10, ch - barH + 6, speakerColor, hudPixelSize);
+
+      // Message text (typewriter)
+      drawPixelText(
+        ctx, activeRadio.text,
+        10, ch - barH + 6 + hudPixelSize * 9,
+        '#ffdd44', Math.max(1, hudPixelSize - 1),
+        'left', activeRadio.charIndex
+      );
     }
 
-    // Progress bar — bottom (blue energy bar)
-    const progress = Math.min(state.elapsed / DURATION, 1);
-    const barHeight = 8;
-    const barY = ch - barHeight - 6;
-    const barX = bounds.left;
-    const barWidth = bounds.right - bounds.left;
+    // ── Phase intro overlay ──
+    if (phaseIntroActive) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(-5, -5, cw + 10, ch + 10);
 
-    // Background
-    ctx.fillStyle = '#111';
-    ctx.fillRect(barX, barY, barWidth, barHeight);
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(barX, barY, barWidth, barHeight);
+      const phase = getCurrentPhase(state.elapsed);
+      const introStart = getPhaseStartTime(phase);
+      const introProgress = (state.elapsed - introStart) / (getPhaseGameplayStart(phase) - introStart);
 
-    // Filled portion — blue energy
-    const filledWidth = barWidth * progress;
-    const barGrad = ctx.createLinearGradient(barX, barY, barX + filledWidth, barY);
-    barGrad.addColorStop(0, '#1565c0');
-    barGrad.addColorStop(0.5, '#42a5f5');
-    barGrad.addColorStop(1, '#4fc3f7');
-    ctx.fillStyle = barGrad;
-    ctx.fillRect(barX + 1, barY + 1, Math.max(filledWidth - 2, 0), barHeight - 2);
+      // Phase number (big)
+      const phaseTextSize = Math.round(hudPixelSize * 3);
+      const fadeIn = Math.min(introProgress * 3, 1);
+      ctx.globalAlpha = fadeIn;
 
-    // Segment marks
-    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-    const segCount = 10;
-    for (let i = 1; i < segCount; i++) {
-      const sx = barX + (barWidth * i) / segCount;
-      ctx.beginPath();
-      ctx.moveTo(sx, barY);
-      ctx.lineTo(sx, barY + barHeight);
-      ctx.stroke();
-    }
+      let phaseTitle = '';
+      if (phase === 1) phaseTitle = 'STAY ON TARGET';
+      else if (phase === 2) phaseTitle = 'WATCH YOUR BACK!';
+      else phaseTitle = 'USE THE FORCE';
 
-    // Glow on leading edge
-    if (filledWidth > 3) {
-      ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.5;
-      ctx.fillRect(barX + filledWidth - 2, barY + 1, 2, barHeight - 2);
+      drawPixelText(ctx, `PHASE ${phase}`, cw / 2, ch / 2 - phaseTextSize * 5, '#ffd700', phaseTextSize, 'center');
+      drawPixelText(ctx, phaseTitle, cw / 2, ch / 2, '#ff4444', Math.round(phaseTextSize * 0.7), 'center');
+
       ctx.globalAlpha = 1;
     }
-
-    // Progress label
-    ctx.fillStyle = '#4fc3f7';
-    ctx.font = `${smallFont}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.fillText(`${Math.round(progress * 100)}%`, (barX + barX + barWidth) / 2, barY - 3);
-
-    ctx.textAlign = 'left';
 
     // ── Game Over Screen ──
     if (state.gameOver) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
       ctx.fillRect(-5, -5, cw + 10, ch + 10);
 
-      ctx.textAlign = 'center';
+      const bigSize = Math.round(hudPixelSize * 2.5);
+      const medSize = Math.round(hudPixelSize * 1.5);
 
-      // Title
-      ctx.fillStyle = '#ff1744';
-      ctx.font = `bold ${Math.round(28 * (cw / 400))}px monospace`;
-      ctx.shadowColor = '#ff1744';
-      ctx.shadowBlur = 20;
-      ctx.fillText('MISSION ÉCHOUÉE', cw / 2, ch / 2 - 65);
-      ctx.shadowBlur = 0;
+      drawPixelText(ctx, 'MISSION ECHOUEE', cw / 2, ch / 2 - bigSize * 10, '#ff1744', bigSize, 'center');
+      drawPixelText(ctx, "L'EMPIRE A PRIS LE DESSUS...", cw / 2, ch / 2 - bigSize * 2, '#ff8f00', medSize, 'center');
+      drawPixelText(ctx, `SCORE: ${state.score}  KILLS: ${state.kills}`, cw / 2, ch / 2 + medSize * 5, '#ffd700', medSize, 'center');
 
-      // Subtitles
-      ctx.fillStyle = '#ff8f00';
-      ctx.font = `${Math.round(13 * (cw / 400))}px monospace`;
-      ctx.fillText("L'Empire a pris le dessus...", cw / 2, ch / 2 - 25);
-      ctx.fillText('Palpatine ricane dans l\'ombre.', cw / 2, ch / 2 + 0);
-
-      // Score summary
-      ctx.fillStyle = '#ffd700';
-      ctx.font = `${Math.round(12 * (cw / 400))}px monospace`;
-      ctx.fillText(`Score: ${state.score}  |  Kills: ${state.kills}`, cw / 2, ch / 2 + 35);
-
-      // Restart prompt (pulsing)
+      // Pulsing restart prompt
       const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 400);
       ctx.globalAlpha = 0.6 + pulse * 0.4;
-      ctx.fillStyle = '#4fc3f7';
-      ctx.font = `${Math.round(14 * (cw / 400))}px monospace`;
-      ctx.fillText('[ APPUIE POUR RÉESSAYER ]', cw / 2, ch / 2 + 70);
+      drawPixelText(ctx, '[ APPUIE POUR REESSAYER ]', cw / 2, ch / 2 + medSize * 14, '#4fc3f7', medSize, 'center');
       ctx.globalAlpha = 1;
-
-      ctx.textAlign = 'left';
     }
 
     // ── Victory End Sequence ──
-    if (endFadeAlpha > 0) {
-      ctx.fillStyle = `rgba(0, 0, 0, ${endFadeAlpha})`;
-      ctx.fillRect(-5, -5, cw + 10, ch + 10);
+    if (victoryTriggered) {
+      // White flash
+      if (victoryFlashAlpha > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${victoryFlashAlpha})`;
+        ctx.fillRect(-5, -5, cw + 10, ch + 10);
+      }
 
-      if (endShowMessage) {
-        ctx.textAlign = 'center';
+      if (victoryTextShown) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(-5, -5, cw + 10, ch + 10);
 
-        // Title
-        ctx.fillStyle = '#ffd700';
-        ctx.font = `bold ${Math.round(24 * (cw / 400))}px monospace`;
-        ctx.shadowColor = '#ffd700';
-        ctx.shadowBlur = 12;
-        ctx.fillText('BIEN JOUÉ, COMMANDANT !', cw / 2, ch / 2 - 25);
-        ctx.shadowBlur = 0;
+        const bigSize = Math.round(hudPixelSize * 3);
+        const medSize = Math.round(hudPixelSize * 1.5);
 
-        // Score
-        ctx.fillStyle = '#4fc3f7';
-        ctx.font = `${Math.round(14 * (cw / 400))}px monospace`;
-        ctx.fillText(`Score final: ${state.score}`, cw / 2, ch / 2 + 10);
-        ctx.fillText(`Kills: ${state.kills}  |  Meilleur combo: x${state.bestCombo}`, cw / 2, ch / 2 + 30);
-
-        ctx.textAlign = 'left';
+        drawPixelText(ctx, 'TIR PARFAIT !', cw / 2, ch / 2 - bigSize * 6, '#ffd700', bigSize, 'center');
+        drawPixelText(ctx, 'BIEN JOUE, COMMANDANT !', cw / 2, ch / 2 - bigSize, '#44ff44', medSize, 'center');
+        drawPixelText(ctx, `SCORE: ${state.score}`, cw / 2, ch / 2 + medSize * 5, '#4fc3f7', medSize, 'center');
+        drawPixelText(ctx, `KILLS: ${state.kills}  COMBO: x${state.bestCombo}`, cw / 2, ch / 2 + medSize * 10, '#4fc3f7', medSize, 'center');
       }
     }
 
     ctx.restore();
   }
 
-  // ── Restart ──────────────────────────────────────────────────────
+  // ── Restart (from current phase checkpoint) ───────────────────────
   function restart() {
+    const restartPhase = checkpointPhase;
+    const restartTime = getPhaseStartTime(restartPhase);
+
     state.running = true;
-    state.score = 0;
+    state.score = checkpointScore;
     state.completed = false;
-    state.elapsed = 0;
+    state.elapsed = restartTime;
     state.hp = MAX_HP;
     state.gameOver = false;
-    state.kills = 0;
+    state.kills = checkpointKills;
     state.combo = 0;
-    state.bestCombo = 0;
     state.noHitStreak = 0;
-    endFadeAlpha = 0;
-    endShowMessage = false;
-    endTriggered = false;
-    bossWaveSpawned = false;
+    state.phase = restartPhase;
+
+    victoryTriggered = false;
+    victoryTimer = 0;
+    victoryFlashAlpha = 0;
+    victoryTextShown = false;
+    bulletTimeActive = false;
+    bulletTimeFactor = 1;
+    targetingProgress = 0;
+    exhaustPortY = -50;
+    exhaustPortSize = 8;
+
     ties.length = 0;
     turrets.length = 0;
+    obstacles.length = 0;
     lasers.length = 0;
     explosions.length = 0;
     tieSpawnTimer = 0;
     turretSpawnTimer = 0;
+    obstacleSpawnTimer = 0;
     fireCooldown = 0;
-    scrollOffset = 0;
     screenShakeTimer = 0;
     lastTime = 0;
     comboTimer = 0;
     lastKillTime = 0;
-    const initB = getTrenchBounds(0);
+    activeRadio = null;
+
+    // Reset shown radio indices for current + future phases
+    for (let i = 0; i < RADIO_MESSAGES.length; i++) {
+      if (RADIO_MESSAGES[i].time >= restartTime) {
+        shownRadioIndices.delete(i);
+      }
+    }
+
+    const initB = getTrenchBounds(restartTime);
     player.x = (initB.left + initB.right) / 2;
     player.y = ch * 0.78;
     player.invincibleTimer = 1;
