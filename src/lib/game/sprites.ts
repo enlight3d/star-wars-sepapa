@@ -167,18 +167,32 @@ let wallTexture: HTMLImageElement | null = null;
 let wallTextureLoaded = false;
 let floorTexture: HTMLImageElement | null = null;
 let floorTextureLoaded = false;
+let wallTextureLeft: HTMLImageElement | null = null;
+let wallTextureLeftLoaded = false;
+let wallTextureRight: HTMLImageElement | null = null;
+let wallTextureRightLoaded = false;
 
 function ensureTexturesLoaded() {
   if (typeof window === 'undefined') return;
   if (!wallTexture) {
     wallTexture = new Image();
     wallTexture.onload = () => { wallTextureLoaded = true; };
-    wallTexture.src = `${base}/sprites/tiles/deathstar_wall.png`;
+    wallTexture.src = `${base}/sprites/tiles/trench_wall.jpg`;
   }
   if (!floorTexture) {
     floorTexture = new Image();
     floorTexture.onload = () => { floorTextureLoaded = true; };
-    floorTexture.src = `${base}/sprites/tiles/deathstar_floor.png`;
+    floorTexture.src = `${base}/sprites/tiles/trench_floor.jpg`;
+  }
+  if (!wallTextureLeft) {
+    wallTextureLeft = new Image();
+    wallTextureLeft.onload = () => { wallTextureLeftLoaded = true; };
+    wallTextureLeft.src = `${base}/sprites/tiles/trench_wall_left.jpg`;
+  }
+  if (!wallTextureRight) {
+    wallTextureRight = new Image();
+    wallTextureRight.onload = () => { wallTextureRightLoaded = true; };
+    wallTextureRight.src = `${base}/sprites/tiles/trench_wall_right.jpg`;
   }
 }
 
@@ -403,427 +417,102 @@ export function drawLaser(ctx: CanvasRenderingContext2D, x: number, y: number, i
   ctx.restore();
 }
 
-// ── Trench Walls — Death Star surface greebling (enhanced) ───────────
+// ── Trench Walls — Image-based textures with indicator lights ───────────
 export function drawTrenchWall(
   ctx: CanvasRenderingContext2D,
   x: number, y: number, w: number, h: number,
   scrollOffset: number
 ) {
-  const ps = PS;
-
-  // Layer 0: Tile the Death Star texture as base
   ensureTexturesLoaded();
-  if (wallTextureLoaded && wallTexture) {
-    const tileSize = 128; // scale the 256px texture down for denser greebling
-    const tileOffY = scrollOffset % tileSize;
+
+  // Determine which wall this is (left or right)
+  const isLeft = x <= 1;
+
+  // 1. Tile the wall texture image across the wall area
+  const tex = isLeft
+    ? (wallTextureLeftLoaded && wallTextureLeft ? wallTextureLeft : (wallTextureLoaded && wallTexture ? wallTexture : null))
+    : (wallTextureRightLoaded && wallTextureRight ? wallTextureRight : (wallTextureLoaded && wallTexture ? wallTexture : null));
+
+  if (tex) {
+    const tileSize = 128;
+    const tileOffY = ((scrollOffset % tileSize) + tileSize) % tileSize;
     ctx.save();
-    ctx.globalAlpha = 0.7; // blend with dark base
+    ctx.imageSmoothingEnabled = false;
     for (let ty = y - tileOffY - tileSize; ty < y + h + tileSize; ty += tileSize) {
       for (let tx = x; tx < x + w; tx += tileSize) {
         if (ty + tileSize < y || ty > y + h) continue;
-        ctx.drawImage(wallTexture, tx, ty, tileSize, tileSize);
+        ctx.drawImage(tex, tx, ty, tileSize, tileSize);
       }
     }
     ctx.restore();
+  } else {
+    // Fallback solid color if textures not loaded yet
+    ctx.fillStyle = '#1a1a1e';
+    ctx.fillRect(x, y, w, h);
   }
 
-  // Layer 1: Base dark metal overlay — semi-transparent to let texture show through
-  ctx.globalAlpha = 0.4;
-  ctx.fillStyle = '#0d0d16';
-  ctx.fillRect(x, y, w, h);
+  // 2. Inner edge shadow — gradient from dark at inner edge to transparent
+  const shadowWidth = 20;
+  if (isLeft) {
+    // Left wall: shadow on right edge (inner trench side)
+    for (let i = 0; i < shadowWidth; i++) {
+      ctx.globalAlpha = 0.6 * (1 - i / shadowWidth);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(x + w - shadowWidth + i, y, 1, h);
+    }
+  } else {
+    // Right wall: shadow on left edge (inner trench side)
+    for (let i = 0; i < shadowWidth; i++) {
+      ctx.globalAlpha = 0.6 * (1 - i / shadowWidth);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(x + i, y, 1, h);
+    }
+  }
   ctx.globalAlpha = 1;
 
-  // Layer 2: Panel grid — two scales with depth illusion
-  // Large panels (16x16)
-  const largePanelSize = 16;
-  const largePanelOff = (scrollOffset * 0.9) % largePanelSize; // parallax: 0.9x
-  for (let py = y - largePanelOff - largePanelSize; py < y + h + largePanelSize; py += largePanelSize) {
-    for (let px2 = x; px2 < x + w; px2 += largePanelSize) {
-      if (py < y - 2 || py > y + h) continue;
-      const hash = ((px2 * 7 + py * 13 + 37) & 0xff);
-      // Panel fill — darker than base
-      const shade = hash % 3 === 0 ? '#0a0a12' : hash % 3 === 1 ? '#0c0c18' : '#0b0b14';
-      ctx.fillStyle = shade;
-      ctx.fillRect(Math.round(px2), Math.round(py), Math.min(largePanelSize, x + w - px2), largePanelSize);
-      // Top/left border (lighter — depth illusion)
-      ctx.fillStyle = '#18182a';
-      ctx.fillRect(Math.round(px2), Math.round(py), Math.min(largePanelSize, x + w - px2), 1);
-      ctx.fillRect(Math.round(px2), Math.round(py), 1, largePanelSize);
+  // 3. Scrolling green indicator lights (movie-style)
+  const lightSpacing = 80;
+  const lightOffY = ((scrollOffset % lightSpacing) + lightSpacing) % lightSpacing;
+  const lightX = isLeft ? x + w - 14 : x + 10;
 
-      // Small panels (6x8) inside large panels
-      for (let sy = py + 2; sy < py + largePanelSize - 2; sy += 8) {
-        for (let sx = px2 + 2; sx < px2 + largePanelSize - 2; sx += 6) {
-          if (sx >= x + w || sy > y + h) continue;
-          const smallHash = ((sx * 3 + sy * 11 + 71) & 0xff);
-          ctx.fillStyle = smallHash % 4 === 0 ? '#080810' : '#090912';
-          const sw = Math.min(5, x + w - sx);
-          ctx.fillRect(Math.round(sx), Math.round(sy), sw, 7);
-        }
-      }
-    }
-  }
+  for (let ly = y - lightOffY; ly < y + h; ly += lightSpacing) {
+    if (ly < y - 4 || ly > y + h - 4) continue;
+    const lightIndex = Math.round(ly / lightSpacing);
+    const isRed = (lightIndex % 3) === 0;
 
-  // Layer 3: Pipe clusters — horizontal and vertical
-  if (w > 16) {
-    const isLeft = x < w;
-    // Thick pipes (3-4px)
-    const pipeX1 = isLeft ? x + w - 10 : x + 4;
-    const pipeThick = ps * 2;
-    ctx.fillStyle = '#12122a';
-    ctx.fillRect(pipeX1, y, pipeThick + ps, h);
-    // Highlight on top edge (light from above)
-    ctx.fillStyle = '#2a2a4a';
-    ctx.fillRect(pipeX1, y, ps, h);
-    // Shadow bottom edge
-    ctx.fillStyle = '#080818';
-    ctx.fillRect(pipeX1 + pipeThick, y, ps, h);
+    // Subtle glow halo (8x8px, alpha 0.3)
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = isRed ? '#ff2222' : '#22ff44';
+    ctx.fillRect(Math.round(lightX - 2), Math.round(ly - 2), 8, 8);
 
-    // Pipe joints / brackets
-    ctx.fillStyle = '#2e2e4a';
-    for (let py2 = y - (scrollOffset % 36); py2 < y + h; py2 += 36) {
-      if (py2 < y - 4) continue;
-      ctx.fillRect(pipeX1 - ps, Math.round(py2), pipeThick + ps * 3, ps * 2);
-      ctx.fillStyle = '#3a3a55';
-      ctx.fillRect(pipeX1, Math.round(py2 + 1), ps, ps);
-      ctx.fillStyle = '#2e2e4a';
-    }
-
-    // Second thinner pipe
-    if (w > 24) {
-      const pipeX2 = isLeft ? x + w - 20 : x + 14;
-      ctx.fillStyle = '#10102a';
-      ctx.fillRect(pipeX2, y, ps * 2, h);
-      ctx.fillStyle = '#222244';
-      ctx.fillRect(pipeX2, y, 1, h);
-    }
-
-    // Third pipe (vertical)
-    if (w > 35) {
-      const pipeX3 = isLeft ? x + 8 : x + w - 14;
-      ctx.fillStyle = '#0e0e24';
-      ctx.fillRect(pipeX3, y, ps + 1, h);
-      ctx.fillStyle = '#1e1e3a';
-      ctx.fillRect(pipeX3, y, 1, h);
-    }
-  }
-
-  // Layer 4: Indicator light clusters
-  if (w > 14) {
-    const lightSpacing = 48;
-    const lightOff = scrollOffset % lightSpacing;
-    const isLeft = x < w;
-    const lightBaseX = isLeft ? x + w - 18 : x + 12;
-
-    for (let ly = y - lightOff; ly < y + h; ly += lightSpacing) {
-      if (ly < y - ps || ly > y + h - ps) continue;
-      const hash = ((ly * 7 + x * 3) & 0xff);
-
-      // Cluster of 2-3 lights
-      const clusterCount = 2 + (hash % 2);
-      for (let ci = 0; ci < clusterCount; ci++) {
-        const lx = lightBaseX + ci * (ps * 3);
-        const lightType = (hash + ci * 37) % 10;
-
-        let color: string;
-        let glowColor: string;
-        let blink = false;
-
-        if (lightType < 4) {
-          // Amber (most common)
-          color = '#ff8c00';
-          glowColor = '#ff6600';
-          blink = lightType === 0;
-        } else if (lightType < 7) {
-          // Red (warning)
-          color = '#cc2222';
-          glowColor = '#ff0000';
-          blink = lightType === 4;
-        } else if (lightType < 9) {
-          // Green (status)
-          color = '#22aa44';
-          glowColor = '#00ff44';
-          blink = false;
-        } else {
-          // Blue (rare)
-          color = '#2266cc';
-          glowColor = '#4488ff';
-          blink = false;
-        }
-
-        // Blinking logic
-        if (blink && Math.sin(scrollOffset * 0.12 + ly * 0.1 + ci) < 0) continue;
-
-        // Glow halo
-        ctx.globalAlpha = 0.25;
-        ctx.fillStyle = glowColor;
-        ctx.fillRect(Math.round(lx - ps), Math.round(ly - ps), ps * 4, ps * 4);
-        ctx.globalAlpha = 1;
-
-        // Light body
-        ctx.fillStyle = color;
-        ctx.fillRect(Math.round(lx), Math.round(ly), ps * 2, ps * 2);
-        // Bright center
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = 0.4;
-        ctx.fillRect(Math.round(lx + 1), Math.round(ly + 1), ps, ps);
-        ctx.globalAlpha = 1;
-      }
-    }
-  }
-
-  // Layer 5: Depth shadows — inner edge gradient
-  if (x <= 1) {
-    // Left wall — shadow on right edge (inner trench)
-    for (let i = 0; i < 6; i++) {
-      ctx.globalAlpha = 0.15 * (1 - i / 6);
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(x + w - ps * (6 - i), y, ps, h);
-    }
+    // Light dot (3x3px)
     ctx.globalAlpha = 1;
-    // Bright inner edge
-    ctx.fillStyle = '#2a2a44';
-    ctx.fillRect(x + w - ps, y, ps, h);
-  } else {
-    // Right wall — shadow on left edge (inner trench)
-    for (let i = 0; i < 6; i++) {
-      ctx.globalAlpha = 0.15 * (1 - i / 6);
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(x + ps * i, y, ps, h);
-    }
-    ctx.globalAlpha = 1;
-    // Bright inner edge
-    ctx.fillStyle = '#2a2a44';
-    ctx.fillRect(x, y, ps, h);
+    ctx.fillStyle = isRed ? '#ff3333' : '#33ff66';
+    ctx.fillRect(Math.round(lightX), Math.round(ly), 3, 3);
   }
-
-  // Layer 6: Surface weathering — streaks and scorch marks
-  const streakSpacing = 80;
-  const streakOff = scrollOffset % streakSpacing;
-  for (let sy = y - streakOff; sy < y + h; sy += streakSpacing) {
-    if (sy < y - 8 || sy > y + h) continue;
-    const hash = ((sy * 13 + x * 7) & 0xff);
-    if (hash % 3 === 0) {
-      // Dark streak
-      ctx.globalAlpha = 0.2;
-      ctx.fillStyle = '#060608';
-      const streakW = 3 + (hash % 8);
-      const streakH = 12 + (hash % 20);
-      const streakX = x + (hash % Math.max(1, Math.floor(w - streakW)));
-      ctx.fillRect(Math.round(streakX), Math.round(sy), streakW, streakH);
-      ctx.globalAlpha = 1;
-    }
-    if (hash % 5 === 0) {
-      // Scorch mark (dark radial)
-      ctx.globalAlpha = 0.15;
-      ctx.fillStyle = '#080808';
-      const scX = x + (hash % Math.max(1, Math.floor(w - 10)));
-      ctx.fillRect(Math.round(scX), Math.round(sy), 8, 6);
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  // Vent grates
-  if (w > 28) {
-    const ventSpacing = 80;
-    const ventOff = scrollOffset % ventSpacing;
-    const isLeft = x < w;
-    const ventX = isLeft ? x + 6 : x + w - 20;
-    for (let vy = y - ventOff + 30; vy < y + h; vy += ventSpacing) {
-      if (vy < y || vy + 14 > y + h) continue;
-      ctx.fillStyle = '#04040a';
-      ctx.fillRect(ventX, Math.round(vy), ps * 6, ps * 6);
-      ctx.fillStyle = '#161630';
-      for (let sl = 0; sl < 6; sl += 2) {
-        ctx.fillRect(ventX, Math.round(vy + sl * ps), ps * 6, ps);
-      }
-      ctx.fillStyle = '#222240';
-      ctx.fillRect(ventX, Math.round(vy), ps * 6, 1);
-      ctx.fillRect(ventX, Math.round(vy + ps * 6 - 1), ps * 6, 1);
-    }
-  }
-
-  // Layer 7: Extra horizontal pipe clusters at different depths
-  if (w > 20) {
-    const isLeft = x < w;
-    // Pipe cluster A — thin twin pipes
-    const pipeA_X = isLeft ? x + 3 : x + w - 7;
-    ctx.fillStyle = '#0d0d22';
-    ctx.fillRect(pipeA_X, y, ps + 1, h);
-    ctx.fillStyle = '#0d0d22';
-    ctx.fillRect(pipeA_X + ps * 2, y, ps, h);
-    ctx.fillStyle = '#1a1a36';
-    ctx.fillRect(pipeA_X, y, 1, h);
-    ctx.fillRect(pipeA_X + ps * 2, y, 1, h);
-    // Pipe brackets
-    ctx.fillStyle = '#252544';
-    for (let pb = y - (scrollOffset % 52); pb < y + h; pb += 52) {
-      if (pb < y - 2) continue;
-      ctx.fillRect(pipeA_X - 1, Math.round(pb), ps * 3 + 2, ps);
-    }
-
-    // Pipe cluster B — offset deeper set
-    if (w > 30) {
-      const pipeB_X = isLeft ? x + w - 28 : x + 22;
-      ctx.fillStyle = '#0b0b20';
-      ctx.fillRect(pipeB_X, y, ps * 2, h);
-      ctx.fillStyle = '#181834';
-      ctx.fillRect(pipeB_X, y, 1, h);
-      ctx.fillStyle = '#070718';
-      ctx.fillRect(pipeB_X + ps * 2, y, 1, h);
-      // Brackets
-      ctx.fillStyle = '#222240';
-      for (let pb2 = y - (scrollOffset % 44) + 20; pb2 < y + h; pb2 += 44) {
-        if (pb2 < y - 2) continue;
-        ctx.fillRect(pipeB_X - 1, Math.round(pb2), ps * 2 + 2, ps);
-      }
-    }
-  }
-
-  // Layer 8: Recessed machinery boxes with internal grid
-  if (w > 22) {
-    const boxSpacing = 64;
-    const boxOff = scrollOffset % boxSpacing;
-    const isLeft = x < w;
-    for (let by = y - boxOff + 10; by < y + h; by += boxSpacing) {
-      if (by < y || by + 12 > y + h) continue;
-      const bHash = ((by * 11 + x * 5 + 99) & 0xff);
-      if (bHash % 3 !== 0) continue; // ~33% of slots get a box
-      const bx = isLeft ? x + 12 + (bHash % Math.max(1, Math.floor(w - 30))) : x + 4 + (bHash % Math.max(1, Math.floor(w - 30)));
-      const bw = 8 + (bHash % 6);
-      const bh = 6 + (bHash % 5);
-      // Dark recessed background
-      ctx.fillStyle = '#040410';
-      ctx.fillRect(Math.round(bx), Math.round(by), bw, bh);
-      // Internal grid lines
-      ctx.fillStyle = '#0e0e24';
-      for (let gx = bx + 2; gx < bx + bw - 1; gx += 3) {
-        ctx.fillRect(Math.round(gx), Math.round(by + 1), 1, bh - 2);
-      }
-      for (let gy = by + 2; gy < by + bh - 1; gy += 3) {
-        ctx.fillRect(Math.round(bx + 1), Math.round(gy), bw - 2, 1);
-      }
-      // Border highlight
-      ctx.fillStyle = '#1a1a34';
-      ctx.fillRect(Math.round(bx), Math.round(by), bw, 1);
-      ctx.fillRect(Math.round(bx), Math.round(by), 1, bh);
-      ctx.fillStyle = '#060614';
-      ctx.fillRect(Math.round(bx), Math.round(by + bh - 1), bw, 1);
-      ctx.fillRect(Math.round(bx + bw - 1), Math.round(by), 1, bh);
-    }
-  }
-
-  // Layer 9: Extra indicator lights (doubled frequency, blue + white added)
-  if (w > 14) {
-    const lightSpacing2 = 32;
-    const lightOff2 = (scrollOffset + 16) % lightSpacing2;
-    const isLeft = x < w;
-    const lightBaseX2 = isLeft ? x + 4 : x + w - 10;
-
-    for (let ly = y - lightOff2; ly < y + h; ly += lightSpacing2) {
-      if (ly < y - ps || ly > y + h - ps) continue;
-      const hash = ((ly * 11 + x * 17 + 53) & 0xff);
-      if (hash % 3 !== 0) continue; // ~33% density
-
-      let color: string;
-      let glowColor: string;
-      const lightType = hash % 12;
-      if (lightType < 3) { color = '#2266cc'; glowColor = '#4488ff'; }
-      else if (lightType < 5) { color = '#ccccdd'; glowColor = '#ffffff'; }
-      else if (lightType < 8) { color = '#ff8c00'; glowColor = '#ff6600'; }
-      else { color = '#22aa44'; glowColor = '#00ff44'; }
-
-      const blink = lightType < 2 && Math.sin(scrollOffset * 0.15 + ly * 0.08) < 0;
-      if (blink) continue;
-
-      ctx.globalAlpha = 0.2;
-      ctx.fillStyle = glowColor;
-      ctx.fillRect(Math.round(lightBaseX2 - 1), Math.round(ly - 1), ps * 3, ps * 3);
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = color;
-      ctx.fillRect(Math.round(lightBaseX2), Math.round(ly), ps, ps);
-    }
-  }
-
-  // Layer 10: Surface bolts/rivets at panel intersections
-  {
-    const boltSpacing = 16;
-    const boltOff = (scrollOffset * 0.9) % boltSpacing;
-    for (let by = y - boltOff; by < y + h; by += boltSpacing) {
-      for (let bx = x + 2; bx < x + w - 2; bx += boltSpacing) {
-        if (by < y || by > y + h) continue;
-        const bHash = ((bx * 7 + by * 3 + 41) & 0xff);
-        if (bHash % 4 !== 0) continue; // ~25% of intersections
-        ctx.fillStyle = '#2a2a48';
-        ctx.fillRect(Math.round(bx), Math.round(by), 1, 1);
-        // Tiny highlight
-        ctx.fillStyle = '#3e3e60';
-        ctx.globalAlpha = 0.6;
-        ctx.fillRect(Math.round(bx), Math.round(by), 1, 1);
-        ctx.globalAlpha = 1;
-      }
-    }
-  }
-
-  // Layer 11: Heat vents — small orange-lit rectangles
-  if (w > 18) {
-    const heatSpacing = 96;
-    const heatOff = (scrollOffset + 40) % heatSpacing;
-    const isLeft = x < w;
-    for (let hy = y - heatOff + 50; hy < y + h; hy += heatSpacing) {
-      if (hy < y || hy + 6 > y + h) continue;
-      const hHash = ((hy * 9 + x * 13 + 77) & 0xff);
-      if (hHash % 4 !== 0) continue;
-      const hx = isLeft ? x + 8 + (hHash % Math.max(1, Math.floor(w - 20))) : x + 4 + (hHash % Math.max(1, Math.floor(w - 20)));
-      // Orange glow behind
-      ctx.globalAlpha = 0.15;
-      ctx.fillStyle = '#ff6600';
-      ctx.fillRect(Math.round(hx - 1), Math.round(hy - 1), 8, 6);
-      ctx.globalAlpha = 0.25;
-      ctx.fillStyle = '#ff4400';
-      ctx.fillRect(Math.round(hx), Math.round(hy), 6, 4);
-      ctx.globalAlpha = 1;
-      // Vent slats
-      ctx.fillStyle = '#1a0a00';
-      ctx.fillRect(Math.round(hx), Math.round(hy), 6, 4);
-      ctx.fillStyle = '#ff6600';
-      ctx.globalAlpha = 0.4;
-      for (let sl = 0; sl < 4; sl += 2) {
-        ctx.fillRect(Math.round(hx), Math.round(hy + sl), 6, 1);
-      }
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  // Outer edge shadow
-  if (x <= 1) {
-    ctx.fillStyle = '#060610';
-    ctx.fillRect(x, y, ps, h);
-  } else {
-    ctx.fillStyle = '#060610';
-    ctx.fillRect(x + w - ps, y, ps, h);
-  }
+  ctx.globalAlpha = 1;
 }
 
-// ── Trench Floor with glowing grid and detail panels ─────────────────
+// ── Trench Floor — Image-based texture with center channel ─────────────────
 export function drawTrenchFloor(
   ctx: CanvasRenderingContext2D,
   left: number, right: number, height: number,
   scrollOffset: number
 ) {
   const w = right - left;
-  const ps = PS;
 
-  // Very dark base
-  ctx.fillStyle = '#050510';
+  // Dark base fill (visible before texture loads)
+  ctx.fillStyle = '#050508';
   ctx.fillRect(left, 0, w, height);
 
-  // Tile the floor texture at 0.5x parallax (deepest layer)
+  // 1. Tile the floor texture image across the floor area
   ensureTexturesLoaded();
   if (floorTextureLoaded && floorTexture) {
     const tileSize = 128;
-    const tileOffY = (scrollOffset * 0.5) % tileSize;
+    const tileOffY = ((scrollOffset % tileSize) + tileSize) % tileSize;
     ctx.save();
-    ctx.globalAlpha = 0.6;
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = 0.85;
     for (let ty = -tileOffY - tileSize; ty < height + tileSize; ty += tileSize) {
       for (let tx = left; tx < right; tx += tileSize) {
         ctx.drawImage(floorTexture, tx, ty, tileSize, tileSize);
@@ -832,141 +521,43 @@ export function drawTrenchFloor(
     ctx.restore();
   }
 
-  // ── LAYER 1 (deepest, slowest parallax 0.4x): Large structural plates ──
-  const deepOff = (scrollOffset * 0.4) % 64;
-  const deepShades = ['#040410', '#06060e', '#050512', '#03030c'];
-  for (let dy = -deepOff; dy < height; dy += 64) {
-    for (let dx = left; dx < right; dx += 48) {
-      const hash = ((dx * 3 + dy * 5 + 17) & 0xff);
-      ctx.fillStyle = deepShades[hash % deepShades.length];
-      ctx.fillRect(Math.round(dx), Math.round(dy), 48, 64);
-      // Panel border — subtle depth
-      ctx.fillStyle = '#0a0a18';
-      ctx.fillRect(Math.round(dx), Math.round(dy), 48, 1);
-      ctx.fillRect(Math.round(dx), Math.round(dy), 1, 64);
-      ctx.fillStyle = '#020208';
-      ctx.fillRect(Math.round(dx), Math.round(dy + 63), 48, 1);
-      ctx.fillRect(Math.round(dx + 47), Math.round(dy), 1, 64);
-    }
-  }
-
-  // ── LAYER 2 (mid, 0.7x parallax): Smaller surface panels + machinery ──
-  const midOff = (scrollOffset * 0.7) % 24;
-  const panelShades = ['#06061a', '#080814', '#0a0a1e', '#050512'];
-  for (let dy = -midOff; dy < height; dy += 24) {
-    for (let dx = left; dx < right; dx += 20) {
-      const hash = ((dx * 11 + dy * 7 + 53) & 0xff);
-      ctx.fillStyle = panelShades[hash % panelShades.length];
-      ctx.fillRect(Math.round(dx), Math.round(dy), 20, 24);
-    }
-  }
-  // Mid-layer pipes (horizontal, 0.7x parallax)
-  const midPipeOff = (scrollOffset * 0.7) % 80;
-  ctx.fillStyle = '#0e0e1e';
-  for (let dy = -midPipeOff; dy < height; dy += 80) {
-    ctx.fillRect(left, Math.round(dy), w, 3);
-    ctx.fillStyle = '#141428';
-    ctx.fillRect(left, Math.round(dy), w, 1);
-    ctx.fillStyle = '#0e0e1e';
-  }
-
-  // ── LAYER 3 (surface, full 1.0x scroll): Grid, details, groove ──
-
-  // Grid lines — dark cyan (#0a2a3a)
-  const gridSize = 32;
-  const gridOffsetY = scrollOffset % gridSize;
-
-  // Horizontal grid
-  ctx.fillStyle = '#0a2a3a';
-  for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
-    ctx.fillRect(left, Math.round(gy), w, ps);
-  }
-  // Subtle glow around horizontal lines
-  ctx.globalAlpha = 0.12;
-  ctx.fillStyle = '#1a4466';
-  for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
-    ctx.fillRect(left, Math.round(gy - 1), w, ps + 2);
-  }
+  // 2. Subtle dark overlay — makes the floor feel deeper than walls
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(left, 0, w, height);
   ctx.globalAlpha = 1;
 
-  // Vertical grid
-  ctx.fillStyle = '#0a2a3a';
-  for (let gx = left; gx <= right; gx += gridSize) {
-    ctx.fillRect(Math.round(gx), 0, ps, height);
-  }
-  ctx.globalAlpha = 0.12;
-  ctx.fillStyle = '#1a4466';
-  for (let gx = left; gx <= right; gx += gridSize) {
-    ctx.fillRect(Math.round(gx - 1), 0, ps + 2, height);
-  }
-  ctx.globalAlpha = 1;
-
-  // Grid intersections — brighter dots
-  ctx.fillStyle = '#104050';
-  for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
-    for (let gx = left; gx <= right; gx += gridSize) {
-      ctx.fillRect(Math.round(gx), Math.round(gy), ps + 1, ps + 1);
-    }
-  }
-
-  // Center channel with green/cyan glow (exhaust port path)
+  // 3. Center channel — darker strip down the middle
   const cx = Math.round((left + right) / 2);
-  const grooveW = Math.round(w * 0.12);
-  ctx.fillStyle = '#030410';
-  ctx.fillRect(cx - grooveW / 2, 0, grooveW, height);
-  // Groove edge highlights — cyan glow
-  ctx.fillStyle = '#0a3a50';
-  ctx.fillRect(cx - grooveW / 2, 0, ps, height);
-  ctx.fillRect(cx + grooveW / 2 - ps, 0, ps, height);
-  // Center subtle green/cyan glow
-  ctx.globalAlpha = 0.08;
-  ctx.fillStyle = '#22ccaa';
-  ctx.fillRect(cx - grooveW / 4, 0, grooveW / 2, height);
+  const channelW = Math.round(w * 0.12);
+  ctx.globalAlpha = 0.4;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(cx - channelW / 2, 0, channelW, height);
   ctx.globalAlpha = 1;
-  // Inner groove detail
-  ctx.fillStyle = '#081828';
-  ctx.fillRect(cx - ps, 0, ps * 2, height);
+  // Subtle edge highlights
+  ctx.fillStyle = '#333333';
+  ctx.fillRect(cx - channelW / 2, 0, 1, height);
+  ctx.fillRect(cx + channelW / 2 - 1, 0, 1, height);
 
-  // Floor details: hatches, grates, vent openings
-  const blockSpacing = 52;
-  const blockOff = scrollOffset % blockSpacing;
-  for (let dy = -blockOff; dy < height; dy += blockSpacing) {
-    if (dy < -12) continue;
-    const hash = ((dy * 17 + 41) & 0xff);
-    // Left side detail
-    if (hash % 3 === 0) {
-      // Hatch
-      ctx.fillStyle = '#0c1420';
-      ctx.fillRect(left + 8, Math.round(dy + 4), ps * 6, ps * 4);
-      ctx.fillStyle = '#142030';
-      ctx.fillRect(left + 8, Math.round(dy + 4), ps * 6, 1);
-      ctx.fillRect(left + 8, Math.round(dy + 4 + ps * 4 - 1), ps * 6, 1);
-      // Handle
-      ctx.fillStyle = '#1a3040';
-      ctx.fillRect(left + 12, Math.round(dy + 6), ps * 3, ps);
-    } else {
-      // Grate
-      ctx.fillStyle = '#080e18';
-      ctx.fillRect(left + 10, Math.round(dy + 6), ps * 5, ps * 3);
-      ctx.fillStyle = '#0e1a28';
-      ctx.fillRect(left + 10, Math.round(dy + 6), ps * 5, 1);
-    }
-    // Right side detail
-    if (hash % 4 === 0) {
-      // Vent opening
-      ctx.fillStyle = '#060c14';
-      ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, ps * 3);
-      ctx.fillStyle = '#0a1420';
-      for (let sl = 0; sl < 3; sl++) {
-        ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6 + sl * ps), ps * 5, 1);
-      }
-    } else {
-      ctx.fillStyle = '#0a1020';
-      ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, ps * 3);
-      ctx.fillStyle = '#121c30';
-      ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, 1);
-    }
+  // 4. Occasional green lights on the floor
+  const lightSpacing = 120;
+  const lightOffY = ((scrollOffset % lightSpacing) + lightSpacing) % lightSpacing;
+  const lightX = cx;
+
+  for (let ly = -lightOffY; ly < height; ly += lightSpacing) {
+    if (ly < -4 || ly > height - 4) continue;
+
+    // Dim glow halo
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = '#22ff44';
+    ctx.fillRect(Math.round(lightX - 2), Math.round(ly - 2), 8, 8);
+
+    // Light dot
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = '#33ff66';
+    ctx.fillRect(Math.round(lightX), Math.round(ly), 3, 3);
   }
+  ctx.globalAlpha = 1;
 }
 
 // ── Explosions — SNES style spectacular ──────────────────────────────
