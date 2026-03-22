@@ -8,6 +8,8 @@
   let canvas: HTMLCanvasElement;
   let upBtn: HTMLButtonElement;
   let downBtn: HTMLButtonElement;
+  let leftBtn: HTMLButtonElement;
+  let rightBtn: HTMLButtonElement;
   let fireBtn: HTMLButtonElement;
 
   let destroyGame: (() => void) | null = null;
@@ -16,22 +18,34 @@
   let isMobile = $state(false);
 
   onMount(() => {
-    isMobile = 'ontouchstart' in window;
-    canvas.width = Math.min(window.innerWidth, 800);
-    canvas.height = Math.min(window.innerHeight * 0.7, 500);
+    isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    // Size canvas to fill available space
+    const maxW = Math.min(window.innerWidth, 800);
+    const maxH = isMobile
+      ? window.innerHeight * 0.55 // leave room for touch controls
+      : Math.min(window.innerHeight * 0.75, 600);
+    canvas.width = maxW;
+    canvas.height = maxH;
 
     const { controls: kbControls, destroy: kbDestroy } = createKeyboardControls();
     destroyKeyboard = kbDestroy;
 
-    if (isMobile && upBtn && downBtn && fireBtn) {
-      const { controls: touchControls, destroy: tDestroy } = createTouchControls(upBtn, downBtn, fireBtn);
+    if (isMobile && upBtn && downBtn && leftBtn && rightBtn && fireBtn) {
+      const { controls: touchControls, destroy: tDestroy } = createTouchControls(
+        upBtn, downBtn, leftBtn, rightBtn, fireBtn
+      );
       destroyTouch = tDestroy;
+      // Merge touch + keyboard controls
       const merged = new Proxy(kbControls, {
-        get(target, prop: keyof typeof kbControls) {
-          return target[prop] || touchControls[prop];
+        get(_target, prop: string) {
+          if (prop in kbControls) {
+            return kbControls[prop as keyof typeof kbControls] || touchControls[prop as keyof typeof touchControls];
+          }
+          return undefined;
         }
       });
-      const game = createTrenchRun(canvas, merged as any, onComplete);
+      const game = createTrenchRun(canvas, merged as typeof kbControls, onComplete);
       destroyGame = game.destroy;
     } else {
       const game = createTrenchRun(canvas, kbControls, onComplete);
@@ -48,21 +62,34 @@
 
 <div class="game-container">
   <div class="game-header">
-    <p>TRENCH RUN — Esquive les obstacles et élimine les TIE Fighters !</p>
+    <p class="title">TRENCH RUN</p>
+    <p class="subtitle">Élimine les TIE Fighters et les tourelles !</p>
     {#if !isMobile}
-      <p class="controls-hint">&#8593;&#8595; Déplacer &middot; ESPACE Tirer</p>
+      <p class="controls-hint">WASD / Flèches : Déplacer &middot; ESPACE : Tirer</p>
     {/if}
   </div>
 
   <canvas bind:this={canvas} class="game-canvas"></canvas>
 
-  <!-- Always render touch buttons so bind:this works for createTouchControls. Visibility controlled via CSS. -->
+  <!-- Touch controls: d-pad left, fire right. Always rendered for bind:this -->
   <div class="touch-controls" class:hidden={!isMobile}>
     <div class="dpad">
-      <button bind:this={upBtn} class="touch-btn up">&#9650;</button>
-      <button bind:this={downBtn} class="touch-btn down">&#9660;</button>
+      <div class="dpad-row">
+        <button bind:this={upBtn} class="touch-btn dpad-btn up" aria-label="Haut">&#9650;</button>
+      </div>
+      <div class="dpad-row middle">
+        <button bind:this={leftBtn} class="touch-btn dpad-btn left" aria-label="Gauche">&#9664;</button>
+        <div class="dpad-center"></div>
+        <button bind:this={rightBtn} class="touch-btn dpad-btn right" aria-label="Droite">&#9654;</button>
+      </div>
+      <div class="dpad-row">
+        <button bind:this={downBtn} class="touch-btn dpad-btn down" aria-label="Bas">&#9660;</button>
+      </div>
     </div>
-    <button bind:this={fireBtn} class="touch-btn fire">FIRE</button>
+
+    <button bind:this={fireBtn} class="touch-btn fire" aria-label="Tirer">
+      FEU
+    </button>
   </div>
 </div>
 
@@ -76,26 +103,40 @@
     align-items: center;
     justify-content: center;
     background: #000;
+    overflow: hidden;
   }
 
   .game-header {
-    color: var(--sw-yellow);
+    color: #ffd700;
     text-align: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     font-family: monospace;
-    font-size: clamp(0.7rem, 2vw, 0.9rem);
+  }
+
+  .game-header .title {
+    font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    margin: 0;
+  }
+
+  .game-header .subtitle {
+    font-size: clamp(0.6rem, 1.8vw, 0.85rem);
+    color: #aaa;
+    margin: 0.2rem 0 0;
   }
 
   .controls-hint {
-    color: var(--sw-blue);
-    font-size: clamp(0.6rem, 1.5vw, 0.8rem);
-    margin-top: 0.3rem;
+    color: #4fc3f7;
+    font-size: clamp(0.55rem, 1.4vw, 0.75rem);
+    margin-top: 0.2rem;
   }
 
   .game-canvas {
-    border: 1px solid #333;
+    border: 1px solid #222;
     touch-action: none;
     max-width: 100%;
+    display: block;
   }
 
   .touch-controls {
@@ -103,44 +144,82 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    max-width: 400px;
-    padding: 1rem 2rem;
-    margin-top: 1rem;
+    max-width: 500px;
+    padding: 0.8rem 1.5rem;
+    margin-top: 0.5rem;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .touch-controls.hidden {
     display: none;
   }
 
+  /* ── D-Pad ─────────────────────────────────────────────── */
   .dpad {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .dpad-row {
+    display: flex;
+    justify-content: center;
+  }
+
+  .dpad-row.middle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .dpad-center {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 215, 0, 0.05);
+    border-radius: 4px;
   }
 
   .touch-btn {
-    background: rgba(255, 215, 0, 0.15);
-    border: 2px solid var(--sw-yellow);
-    color: var(--sw-yellow);
+    background: rgba(255, 215, 0, 0.12);
+    border: 2px solid rgba(255, 215, 0, 0.6);
+    color: #ffd700;
     font-family: monospace;
     font-weight: bold;
-    border-radius: 12px;
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .touch-btn.up, .touch-btn.down {
-    width: 70px;
-    height: 55px;
-    font-size: 1.5rem;
+  .touch-btn:active {
+    background: rgba(255, 215, 0, 0.3);
+  }
+
+  .dpad-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .touch-btn.fire {
-    width: 90px;
-    height: 90px;
+    width: 85px;
+    height: 85px;
     border-radius: 50%;
     font-size: 1rem;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
+    border-color: rgba(255, 68, 68, 0.7);
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.12);
+  }
+
+  .touch-btn.fire:active {
+    background: rgba(255, 68, 68, 0.35);
   }
 </style>
