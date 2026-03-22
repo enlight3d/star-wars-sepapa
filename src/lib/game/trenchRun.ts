@@ -55,6 +55,7 @@ export interface GameState {
   bestCombo: number;
   noHitStreak: number;
   phase: number;
+  paused: boolean;
 }
 
 // ── Constants ───────────────────────────────────────────────────────
@@ -143,7 +144,7 @@ export function createTrenchRun(
     running: true, score: 0, completed: false, elapsed: 0,
     hp: MAX_HP, maxHp: MAX_HP, gameOver: false,
     kills: 0, combo: 0, bestCombo: 0, noHitStreak: 0,
-    phase: 1
+    phase: 1, paused: false
   };
 
   // Checkpoint state for restart
@@ -963,15 +964,47 @@ export function createTrenchRun(
   canvas.addEventListener('click', onRestartClick);
   canvas.addEventListener('touchstart', onRestartClick);
 
+  // ── Pause (Escape or P key) ─────────────────────────────────────
+  function onPauseKey(e: KeyboardEvent) {
+    if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+      if (!state.gameOver && !state.completed) {
+        state.paused = !state.paused;
+        if (!state.paused) lastTime = 0; // reset delta so no jump
+      }
+    }
+  }
+  window.addEventListener('keydown', onPauseKey);
+
+  function renderPause() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, cw, ch);
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd700';
+    ctx.font = `bold ${Math.round(28 * (cw / 400))}px monospace`;
+    ctx.shadowColor = '#ffd700';
+    ctx.shadowBlur = 10;
+    ctx.fillText('PAUSE', cw / 2, ch / 2 - 15);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#4fc3f7';
+    ctx.font = `${Math.round(12 * (cw / 400))}px monospace`;
+    ctx.fillText('Appuie sur ESC ou P pour reprendre', cw / 2, ch / 2 + 20);
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
   // ── Game Loop ─────────────────────────────────────────────────────
   function gameLoop(timestamp: number) {
     if (state.completed) return;
     const dt = lastTime ? (timestamp - lastTime) / 1000 : 0.016;
     lastTime = timestamp;
-    if (state.running) {
+    if (state.running && !state.paused) {
       update(Math.min(dt, 0.05));
     }
     render();
+    if (state.paused) renderPause();
     animId = requestAnimationFrame(gameLoop);
   }
 
@@ -984,6 +1017,7 @@ export function createTrenchRun(
       cancelAnimationFrame(animId);
       canvas.removeEventListener('click', onRestartClick);
       canvas.removeEventListener('touchstart', onRestartClick);
+      window.removeEventListener('keydown', onPauseKey);
     }
   };
 }
