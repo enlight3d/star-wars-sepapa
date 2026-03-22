@@ -3,16 +3,22 @@
 
   let { onComplete }: { onComplete: () => void } = $props();
 
-  let animate = $state(false);
+  let phase = $state<'hidden' | 'big' | 'readable' | 'shrinking'>('hidden');
 
   onMount(() => {
-    setTimeout(() => animate = true, 100);
-    setTimeout(onComplete, 5500);
+    // Phase 1: appear big
+    setTimeout(() => phase = 'big', 100);
+    // Phase 2: settle at readable size (hold for 3 seconds)
+    setTimeout(() => phase = 'readable', 800);
+    // Phase 3: shrink away into the distance
+    setTimeout(() => phase = 'shrinking', 4000);
+    // Done
+    setTimeout(onComplete, 8000);
   });
 </script>
 
 <div class="logo-reveal">
-  <div class="logo-container" class:animate>
+  <div class="logo-container" class:big={phase === 'big'} class:readable={phase === 'readable'} class:shrinking={phase === 'shrinking'}>
     <h1 class="title">JOYEUX<br/>ANNIVERSAIRE</h1>
     <h2 class="subtitle">ALEXIS</h2>
   </div>
@@ -31,14 +37,26 @@
 
   .logo-container {
     text-align: center;
-    transform: scale(3);
-    opacity: 1;
-    transition: transform 5s ease-out, opacity 0.5s ease;
+    transform: scale(4);
+    opacity: 0;
+    transition: transform 0.7s ease-out, opacity 0.7s ease;
   }
 
-  .logo-container.animate {
-    transform: scale(0.3) translateZ(-200px);
+  .logo-container.big {
+    transform: scale(2.5);
+    opacity: 1;
+  }
+
+  .logo-container.readable {
+    transform: scale(1);
+    opacity: 1;
+    transition: transform 1s ease-out, opacity 0.5s ease;
+  }
+
+  .logo-container.shrinking {
+    transform: scale(0.2) translateZ(-300px);
     opacity: 0;
+    transition: transform 4s ease-in, opacity 3s ease-in;
   }
 
   .title {

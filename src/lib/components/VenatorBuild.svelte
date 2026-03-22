@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import * as THREE from 'three';
   import { loadVenator, type VenatorModel } from '$lib/three/venatorLoader';
   import { createConfetti } from '$lib/three/particles';
@@ -17,16 +17,20 @@
   let totalBricks = $state(0);
 
   onMount(async () => {
-    // Step 1: Load the model FIRST (loading screen is visible)
+    // Let Svelte render the loading screen first
+    await tick();
+    await new Promise(r => setTimeout(r, 100));
+
+    // Step 1: Load the model (loading screen is visible)
     let venator: VenatorModel;
     const loadStart = Date.now();
     try {
       venator = await loadVenator();
       totalBricks = venator.bricks.length;
 
-      // Ensure loading screen shows for at least 2s
+      // Ensure loading screen shows for at least 3s
       const elapsed = Date.now() - loadStart;
-      const remaining = Math.max(0, 2000 - elapsed);
+      const remaining = Math.max(0, 3000 - elapsed);
       await new Promise(r => setTimeout(r, remaining));
     } catch (err) {
       console.error('Failed to load Venator model:', err);
