@@ -8,9 +8,23 @@
 
   onMount(() => {
     if (crawlEl) {
+      // Check periodically if text has scrolled out of view
+      const checkInterval = setInterval(() => {
+        const rect = crawlEl.getBoundingClientRect();
+        // When the bottom edge of the text passes above the viewport top, we're done
+        if (rect.bottom < 0) {
+          clearInterval(checkInterval);
+          onComplete();
+        }
+      }, 500);
+
+      // Fallback: also listen for animationend
       crawlEl.addEventListener('animationend', () => {
+        clearInterval(checkInterval);
         onComplete();
       }, { once: true });
+
+      return () => clearInterval(checkInterval);
     }
   });
 </script>
@@ -61,7 +75,7 @@
     width: 100%;
     text-align: justify;
     text-align-last: center;
-    animation: crawl 40s linear forwards;
+    animation: crawl 55s linear forwards;
   }
 
   .crawl-content p {
