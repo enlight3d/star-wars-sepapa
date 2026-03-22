@@ -17,6 +17,27 @@
   let totalBricks = $state(0);
 
   onMount(async () => {
+    // Step 1: Load the model FIRST (loading screen is visible)
+    let venator: VenatorModel;
+    const loadStart = Date.now();
+    try {
+      venator = await loadVenator();
+      totalBricks = venator.bricks.length;
+
+      // Ensure loading screen shows for at least 2s
+      const elapsed = Date.now() - loadStart;
+      const remaining = Math.max(0, 2000 - elapsed);
+      await new Promise(r => setTimeout(r, remaining));
+    } catch (err) {
+      console.error('Failed to load Venator model:', err);
+      showLoading = false;
+      setTimeout(onComplete, 1000);
+      return;
+    }
+
+    // Step 2: NOW create the 3D scene and renderer
+    showLoading = false;
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000005);
 
@@ -44,30 +65,12 @@
     let orbitRadius = 2000;
     let angle = 0;
 
-    let venator: VenatorModel;
-    const loadStart = Date.now();
-    try {
-      venator = await loadVenator();
-      scene.add(venator.root);
-      totalBricks = venator.bricks.length;
-
-      // Calculate camera distance based on model size
-      const box = new THREE.Box3().setFromObject(venator.root);
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      orbitRadius = maxDim * 0.9;
-
-      // Show loading screen for at least 2 seconds so user sees it
-      const elapsed = Date.now() - loadStart;
-      const remaining = Math.max(0, 2000 - elapsed);
-      await new Promise(r => setTimeout(r, remaining));
-      showLoading = false;
-    } catch (err) {
-      console.error('Failed to load Venator model:', err);
-      showLoading = false;
-      setTimeout(onComplete, 1000);
-      return;
-    }
+    // Add model to scene and calculate camera distance
+    scene.add(venator.root);
+    const box = new THREE.Box3().setFromObject(venator.root);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    orbitRadius = maxDim * 0.9;
     let animId: number;
     let lastTime = 0;
 

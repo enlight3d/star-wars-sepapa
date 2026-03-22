@@ -33,7 +33,7 @@ export interface GameState {
 }
 
 // ── Constants ───────────────────────────────────────────────────────
-const DURATION = 35;
+const DURATION = 5; // DEBUG: 5s for testing
 const PLAYER_SPEED = 4;
 const SCROLL_SPEED = 120; // pixels per second
 const FIRE_COOLDOWN = 0.18;

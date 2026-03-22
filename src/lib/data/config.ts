@@ -23,12 +23,21 @@ la galaxie grâce à la puissance
 des données et de l'intelligence
 artificielle.
 
-Mais ses plus fidèles alliés ont
-secrètement uni leurs forces pour
-lui offrir un cadeau digne de
-son rang...
+De Noisy-le-Grand aux confins de
+la bordure extérieure, sa plateforme
+OURANOS surveille et protège les
+systèmes habités, tel un bouclier
+invisible au service des citoyens.
+
+Mais ses plus fidèles alliés,
+réunis en conseil secret, ont
+décidé de lui offrir un cadeau
+digne de son rang de Commandant...
 
 Un projet d'envergure colossale,
 fruit de la contribution de neuf
-commandants de la flotte, est
-sur le point d'être révélé...`;
+officiers de la flotte, est sur
+le point d'être révélé...
+
+Que la Force soit avec toi,
+Alexis.`;
