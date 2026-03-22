@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { password } from '$lib/data/config';
   import { playTerminalBeep, playTerminalGranted, playTerminalDenied, playBootSound } from '$lib/audio/audioManager';
+  import { currentStep } from '$lib/stores/gameState';
   import BlastDoor from './BlastDoor.svelte';
 
   let { onComplete }: { onComplete: () => void } = $props();
@@ -56,7 +57,15 @@
   });
 
   function handleSubmit() {
-    if (inputValue.toLowerCase().trim() === password.toLowerCase().trim()) {
+    const input = inputValue.toLowerCase().trim();
+    // Cheat code: skip to cinematic (bypass mini-game)
+    if (input === 'iddqd') {
+      status = 'granted';
+      playTerminalGranted();
+      setTimeout(() => currentStep.set(3), 800);
+      return;
+    }
+    if (input === password.toLowerCase().trim()) {
       status = 'granted';
       playTerminalGranted();
       setTimeout(() => showPixelate = true, 1200);
