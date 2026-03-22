@@ -40,6 +40,9 @@
 
     const confetti = createConfetti(scene);
 
+    let orbitRadius = 2000;
+    let angle = 0;
+
     let venator: VenatorModel;
     try {
       venator = await loadVenator();
@@ -58,9 +61,6 @@
       setTimeout(onComplete, 1000);
       return;
     }
-
-    let orbitRadius = 2000;
-    let angle = 0;
     let animId: number;
     let lastTime = 0;
 
@@ -151,10 +151,16 @@
 <div class="venator-scene" bind:this={container}>
   {#if showLoading}
     <div class="loading">
-      <p>RÉCEPTION ET DÉBALLAGE DES MATÉRIAUX...</p>
+      <div class="loading-icon">
+        <div class="brick brick-1"></div>
+        <div class="brick brick-2"></div>
+        <div class="brick brick-3"></div>
+      </div>
+      <p class="loading-text">RÉCEPTION ET DÉBALLAGE DES MATÉRIAUX...</p>
       <div class="progress-bar">
         <div class="progress-fill" style="width: {$modelProgress * 100}%"></div>
       </div>
+      <p class="loading-sub">Préparation de 5 345 briques</p>
     </div>
   {/if}
 
@@ -183,7 +189,26 @@
 
 <style>
   .venator-scene { position: absolute; inset: 0; z-index: 10; }
-  .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; text-align: center; color: var(--imperial-amber); font-family: monospace; }
+  .loading {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 20; text-align: center; color: var(--imperial-amber); font-family: monospace;
+  }
+  .loading-icon {
+    display: flex; gap: 8px; justify-content: center; margin-bottom: 2rem;
+  }
+  .brick {
+    width: 24px; height: 16px; border-radius: 3px;
+    animation: brickBounce 1.2s ease-in-out infinite;
+  }
+  .brick-1 { background: #c91a09; animation-delay: 0s; }
+  .brick-2 { background: #a5a5a5; animation-delay: 0.2s; }
+  .brick-3 { background: #05131d; border: 1px solid #333; animation-delay: 0.4s; }
+  @keyframes brickBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40% { transform: translateY(-20px); opacity: 1; }
+  }
+  .loading-text { font-size: clamp(0.8rem, 2.5vw, 1.1rem); letter-spacing: 0.1em; }
+  .loading-sub { font-size: clamp(0.6rem, 1.5vw, 0.8rem); opacity: 0.5; margin-top: 1rem; }
   .progress-bar { width: 300px; height: 6px; background: #333; margin-top: 1rem; border-radius: 3px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--imperial-amber); transition: width 0.3s ease; }
   .brick-counter { position: absolute; top: 20px; right: 20px; z-index: 20; color: var(--sw-yellow); font-family: monospace; font-size: clamp(0.8rem, 2vw, 1rem); opacity: 0.7; }
