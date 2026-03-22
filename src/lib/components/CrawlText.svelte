@@ -8,7 +8,7 @@
 
   onMount(() => {
     if (crawlEl) {
-      const timer = setTimeout(onComplete, 30000);
+      const timer = setTimeout(onComplete, 27000);
       return () => clearTimeout(timer);
     }
   });
