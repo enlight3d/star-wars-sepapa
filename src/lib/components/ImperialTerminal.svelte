@@ -204,6 +204,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 0;
     font-family: 'Courier New', 'Lucida Console', monospace;
     font-size: clamp(0.6rem, 1.4vw, 0.85rem);
