@@ -362,11 +362,10 @@ export function drawTurret(
   const ps = PS;
   const dir = facingRight ? 1 : -1;
 
-  // Trapezoid tower base (top-down view: wider at back, narrower at front)
-  // Back (away from trench)
-  const baseW = 18 * s;
-  const baseH = 20 * s;
-  const topW = 14 * s;
+  // Trapezoid tower base — LARGE and visible
+  const baseW = 28 * s;
+  const baseH = 32 * s;
+  const topW = 22 * s;
 
   // Draw trapezoid as stacked rectangles (wider to narrower)
   for (let row = 0; row < baseH; row += ps) {
@@ -388,14 +387,15 @@ export function drawTurret(
   ctx.fillStyle = '#4a4a55';
   ctx.fillRect(Math.round(x - topW / 2 + 3 * s), Math.round(y - 3 * s), Math.round(topW - 6 * s), Math.round(6 * s));
 
-  // Twin barrels — rotate with aimAngle
-  const barrelLen = 14 * s;
-  const barrelW = 3 * s;
-  const barrelGap = 4 * s;
+  // Twin barrels — larger and more visible
+  const barrelLen = 20 * s;
+  const barrelW = 4 * s;
+  const barrelGap = 5 * s;
 
-  // Rotate barrel assembly around turret center
+  // Rotate barrel assembly: base angle points into trench, then add aim offset
+  const baseAngle = facingRight ? 0 : Math.PI; // right = 0°, left = 180°
   ctx.translate(x, y);
-  ctx.rotate(_aimAngle);
+  ctx.rotate(baseAngle + _aimAngle);
 
   // Barrel 1 (upper)
   ctx.fillStyle = '#3a3a42';
@@ -423,54 +423,53 @@ export function drawTurret(
 }
 
 // ── Lasers (pixel-block style with glow) ─────────────────────────────
-export function drawLaser(ctx: CanvasRenderingContext2D, x: number, y: number, isEnemy: boolean) {
+export function drawLaser(ctx: CanvasRenderingContext2D, x: number, y: number, isEnemy: boolean, vx: number = 0, vy: number = -1) {
   ctx.save();
   const ps = PS;
+
+  // Rotate laser to match its velocity direction
+  const angle = Math.atan2(vy, vx) + Math.PI / 2; // +90° because bolt is drawn vertically
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  // Now draw centered at origin, pointing "up" (which rotation maps to velocity direction)
+  const ox = 0, oy = 0;
 
   if (isEnemy) {
     // Red enemy bolt — glow aura
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = '#ff2222';
-    ctx.fillRect(x - ps * 3, y - ps * 5, ps * 6, ps * 10);
+    ctx.fillRect(ox - ps * 3, oy - ps * 5, ps * 6, ps * 10);
     ctx.globalAlpha = 1;
-    // Outer darker red
     ctx.fillStyle = '#aa1111';
-    ctx.fillRect(x - ps * 1.5, y - ps * 5, ps * 3, ps * 10);
-    // Main body
+    ctx.fillRect(ox - ps * 1.5, oy - ps * 5, ps * 3, ps * 10);
     ctx.fillStyle = '#ff5555';
-    ctx.fillRect(x - ps, y - ps * 4, ps * 2, ps * 8);
-    // Bright core
+    ctx.fillRect(ox - ps, oy - ps * 4, ps * 2, ps * 8);
     ctx.fillStyle = '#ffbbbb';
-    ctx.fillRect(x - ps * 0.5, y - ps * 3.5, ps, ps * 7);
-    // Tips
+    ctx.fillRect(ox - ps * 0.5, oy - ps * 3.5, ps, ps * 7);
     ctx.fillStyle = '#ff2222';
-    ctx.fillRect(x - ps * 2, y - ps * 6, ps * 4, ps);
-    ctx.fillRect(x - ps * 2, y + ps * 5, ps * 4, ps);
+    ctx.fillRect(ox - ps * 2, oy - ps * 6, ps * 4, ps);
+    ctx.fillRect(ox - ps * 2, oy + ps * 5, ps * 4, ps);
     ctx.fillStyle = '#ffcccc';
-    ctx.fillRect(x - ps * 0.5, y - ps * 6, ps, ps);
-    ctx.fillRect(x - ps * 0.5, y + ps * 5, ps, ps);
+    ctx.fillRect(ox - ps * 0.5, oy - ps * 6, ps, ps);
+    ctx.fillRect(ox - ps * 0.5, oy + ps * 5, ps, ps);
   } else {
     // Green player bolt — longer, with glow
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = '#22ff22';
-    ctx.fillRect(x - ps * 3, y - ps * 7, ps * 6, ps * 14);
+    ctx.fillRect(ox - ps * 3, oy - ps * 7, ps * 6, ps * 14);
     ctx.globalAlpha = 1;
-    // Outer darker green
     ctx.fillStyle = '#11aa11';
-    ctx.fillRect(x - ps * 1.5, y - ps * 6, ps * 3, ps * 12);
-    // Main body
+    ctx.fillRect(ox - ps * 1.5, oy - ps * 6, ps * 3, ps * 12);
     ctx.fillStyle = '#44ff44';
-    ctx.fillRect(x - ps, y - ps * 5, ps * 2, ps * 10);
-    // Bright core
+    ctx.fillRect(ox - ps, oy - ps * 5, ps * 2, ps * 10);
     ctx.fillStyle = '#ccffcc';
-    ctx.fillRect(x - ps * 0.5, y - ps * 4.5, ps, ps * 9);
-    // Tips
+    ctx.fillRect(ox - ps * 0.5, oy - ps * 4.5, ps, ps * 9);
     ctx.fillStyle = '#22ff22';
-    ctx.fillRect(x - ps * 2, y - ps * 7, ps * 4, ps);
-    ctx.fillRect(x - ps * 2, y + ps * 6, ps * 4, ps);
+    ctx.fillRect(ox - ps * 2, oy - ps * 7, ps * 4, ps);
+    ctx.fillRect(ox - ps * 2, oy + ps * 6, ps * 4, ps);
     ctx.fillStyle = '#eeffee';
-    ctx.fillRect(x - ps * 0.5, y - ps * 7, ps, ps);
-    ctx.fillRect(x - ps * 0.5, y + ps * 6, ps, ps);
+    ctx.fillRect(ox - ps * 0.5, oy - ps * 7, ps, ps);
+    ctx.fillRect(ox - ps * 0.5, oy + ps * 6, ps, ps);
   }
 
   ctx.restore();

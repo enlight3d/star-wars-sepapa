@@ -321,8 +321,8 @@ export function createTrenchRun(
   function spawnTurret() {
     const bounds = getTrenchBounds(state.elapsed);
     const onLeft = Math.random() > 0.5;
-    const turretW = 24 * scale;
-    const turretH = 24 * scale;
+    const turretW = 36 * scale;
+    const turretH = 36 * scale;
     turrets.push({
       x: onLeft ? bounds.left - turretW * 0.3 : bounds.right - turretW * 0.7,
       y: -turretH,
@@ -1064,7 +1064,7 @@ export function createTrenchRun(
 
     // Lasers + wall glow
     for (const l of lasers) {
-      drawLaser(ctx, l.x, l.y, l.isEnemy);
+      drawLaser(ctx, l.x, l.y, l.isEnemy, l.vx, l.vy);
       drawLaserWallGlow(ctx, l.x, l.y, l.isEnemy, bounds.left, bounds.right);
     }
 
