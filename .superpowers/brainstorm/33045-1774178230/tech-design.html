@@ -1,0 +1,92 @@
+<h2>Architecture Technique — The Full Saga</h2>
+<p class="subtitle">SvelteKit + Three.js (Threlte) — structure du projet</p>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">Stack Technique</div>
+    <div class="mockup-body" style="background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 2rem; font-size: 0.9rem;">
+      <div style="margin-bottom: 1.5rem;">
+        <span style="color: #ffd700;">Framework :</span> SvelteKit (mode static adapter — pas de serveur)<br>
+        <span style="color: #ffd700;">3D :</span> Threlte (Three.js pour Svelte)<br>
+        <span style="color: #ffd700;">Audio :</span> Howler.js (gestion audio cross-browser, mobile-friendly)<br>
+        <span style="color: #ffd700;">Animations :</span> Svelte transitions natives + CSS keyframes<br>
+        <span style="color: #ffd700;">Déploiement :</span> Vercel / Netlify / GitHub Pages (static)<br>
+        <span style="color: #ffd700;">Responsive :</span> Mobile-first, touch controls pour le mini-jeu
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <div class="mockup">
+    <div class="mockup-header">Architecture des Composants</div>
+    <div class="mockup-body" style="background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 2rem; font-size: 0.85rem; line-height: 1.6;">
+<pre style="margin: 0; color: #c9d1d9;">
+src/
+├── routes/
+│   └── +page.svelte          <span style="color: #8b949e;">← Orchestrateur principal</span>
+│
+├── lib/
+│   ├── stores/
+│   │   └── gameState.ts       <span style="color: #8b949e;">← État global (étape courante, score, audio)</span>
+│   │
+│   ├── components/
+│   │   ├── Starfield.svelte   <span style="color: #8b949e;">← Fond étoilé animé (réutilisé partout)</span>
+│   │   ├── ClickToStart.svelte
+│   │   ├── ImperialTerminal.svelte  <span style="color: #8b949e;">← Énigme Code Impérial</span>
+│   │   ├── TrenchRun.svelte   <span style="color: #8b949e;">← Mini-jeu X-Wing (canvas 2D)</span>
+│   │   ├── FarAway.svelte     <span style="color: #8b949e;">← "Il y a longtemps..."</span>
+│   │   ├── LogoReveal.svelte  <span style="color: #8b949e;">← "JOYEUX ANNIVERSAIRE"</span>
+│   │   ├── CrawlText.svelte   <span style="color: #8b949e;">← Texte incliné qui défile</span>
+│   │   ├── VenatorBuild.svelte <span style="color: #8b949e;">← Construction 3D (Threlte)</span>
+│   │   └── FinalMessage.svelte <span style="color: #8b949e;">← Hologramme + noms + confettis</span>
+│   │
+│   ├── game/
+│   │   ├── trenchRun.ts       <span style="color: #8b949e;">← Logique du jeu (boucle, collisions)</span>
+│   │   ├── sprites.ts         <span style="color: #8b949e;">← X-Wing, obstacles (pixel art)</span>
+│   │   └── controls.ts        <span style="color: #8b949e;">← Clavier + touch mobile</span>
+│   │
+│   ├── three/
+│   │   ├── venator.ts         <span style="color: #8b949e;">← Modèle 3D low-poly du Venator</span>
+│   │   └── particles.ts      <span style="color: #8b949e;">← Confettis, particules dorées</span>
+│   │
+│   └── audio/
+│       └── audioManager.ts    <span style="color: #8b949e;">← Gestion musique + SFX</span>
+│
+└── static/
+    ├── fonts/                 <span style="color: #8b949e;">← Font Star Wars (Star Jedi)</span>
+    └── audio/                 <span style="color: #8b949e;">← Musique + effets sonores</span>
+</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 2rem;">
+  <div class="mockup">
+    <div class="mockup-header">Flow de transitions</div>
+    <div class="mockup-body" style="background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 2rem; font-size: 0.9rem;">
+<pre style="margin: 0; color: #4fc3f7;">
+ClickToStart ──→ ImperialTerminal ──→ TrenchRun
+                  (mot de passe)       (mini-jeu)
+                                          │
+                                     [VICTOIRE]
+                                          │
+                                          ▼
+                  FarAway ──→ LogoReveal ──→ CrawlText
+               "Il y a            zoom          défilement
+              longtemps..."      arrière         incliné
+                                                    │
+                                                    ▼
+                              VenatorBuild ──→ FinalMessage
+                            construction 3D    hologramme
+                            brique par brique   + noms
+                            (s'arrête à 50%)   + confettis
+                                    │
+                            "L'Empire est à court
+                             de budget... 💸"
+</pre>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top: 2rem;">Cette architecture te parle ? On peut ajuster avant que je finalise le design doc.</p>

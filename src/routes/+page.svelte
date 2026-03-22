@@ -13,6 +13,7 @@
   import { loadVenator } from '$lib/three/venatorLoader';
 
   let transitioning = $state(false);
+
   let preloadPromise: Promise<any> | null = null;
   $effect(() => {
     if ($currentStep >= 1 && !preloadPromise) {

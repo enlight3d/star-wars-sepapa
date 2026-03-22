@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { LDrawLoader } from 'three/examples/jsm/loaders/LDrawLoader.js';
 import { LDrawConditionalLineMaterial } from 'three/examples/jsm/materials/LDrawConditionalLineMaterial.js';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { LDrawUtils } from 'three/examples/jsm/utils/LDrawUtils.js';
 import { contributors } from '$lib/data/config';
 import { modelProgress, modelLoaded } from '$lib/stores/gameState';
 
@@ -10,14 +10,14 @@ export interface BrickGroup {
   mesh: THREE.Group;
 }
 
-let cachedGroups: BrickGroup[] | null = null;
-let loadingPromise: Promise<BrickGroup[]> | null = null;
+let cachedResult: { groups: BrickGroup[], root: THREE.Group } | null = null;
+let loadingPromise: Promise<{ groups: BrickGroup[], root: THREE.Group }> | null = null;
 
-export async function loadVenator(): Promise<BrickGroup[]> {
-  if (cachedGroups) return cachedGroups;
+export async function loadVenator(): Promise<{ groups: BrickGroup[], root: THREE.Group }> {
+  if (cachedResult) return cachedResult;
   if (loadingPromise) return loadingPromise;
 
-  loadingPromise = new Promise<BrickGroup[]>((resolve, reject) => {
+  loadingPromise = new Promise((resolve, reject) => {
     const loader = new LDrawLoader();
     loader.setConditionalLineMaterial(LDrawConditionalLineMaterial);
     loader.setPartsLibraryPath('/models/ldraw/');
@@ -27,70 +27,45 @@ export async function loadVenator(): Promise<BrickGroup[]> {
       (model) => {
         modelProgress.set(0.5);
 
-        const allMeshes: THREE.Mesh[] = [];
-        model.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.updateMatrixWorld(true);
-            allMeshes.push(child);
-          }
-        });
+        // Merge geometries by material for performance
+        const merged = LDrawUtils.mergeObject(model);
 
-        const byColor = new Map<string, THREE.Mesh[]>();
-        for (const mesh of allMeshes) {
-          const mat = mesh.material as THREE.MeshStandardMaterial;
-          const colorKey = mat.color.getHexString();
-          if (!byColor.has(colorKey)) byColor.set(colorKey, []);
-          byColor.get(colorKey)!.push(mesh);
-        }
+        // Center the model at origin
+        const box = new THREE.Box3().setFromObject(merged);
+        const center = box.getCenter(new THREE.Vector3());
+        merged.position.set(-center.x, -center.y, -center.z);
 
-        const mergedMeshes: THREE.Mesh[] = [];
-        for (const [, meshes] of byColor) {
-          const geometries = meshes.map(m => {
-            const geom = m.geometry.clone();
-            geom.applyMatrix4(m.matrixWorld);
-            geom.computeVertexNormals();
-            return geom;
-          });
-          const merged = mergeGeometries(geometries, false);
-          if (!merged) continue;
-          const mat = (meshes[0].material as THREE.Material).clone();
-          mergedMeshes.push(new THREE.Mesh(merged, mat));
-        }
+        // Create root container
+        const root = new THREE.Group();
+        root.add(merged);
+
+        // Collect all children for grouping
+        const allChildren = [...merged.children];
+
+        // Remove from merged, redistribute into contributor groups
+        merged.remove(...allChildren);
 
         const groupCount = contributors.length;
-        const meshesPerGroup = Math.ceil(mergedMeshes.length / groupCount);
         const groups: BrickGroup[] = [];
 
         for (let i = 0; i < groupCount; i++) {
-          const group = new THREE.Group();
-          const start = i * meshesPerGroup;
-          const end = Math.min(start + meshesPerGroup, mergedMeshes.length);
-          for (let j = start; j < end; j++) {
-            group.add(mergedMeshes[j]);
-          }
-          group.visible = false;
-          groups.push({ name: contributors[i], mesh: group });
+          const subGroup = new THREE.Group();
+          subGroup.visible = false;
+          merged.add(subGroup);
+          groups.push({ name: contributors[i], mesh: subGroup });
         }
 
-        const box = new THREE.Box3();
-        for (const g of groups) {
-          g.mesh.visible = true;
-          box.expandByObject(g.mesh);
-          g.mesh.visible = false;
-        }
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 10 / maxDim;
-        const center = box.getCenter(new THREE.Vector3());
-        for (const g of groups) {
-          g.mesh.position.sub(center);
-          g.mesh.scale.setScalar(scale);
-        }
+        // Distribute round-robin
+        allChildren.forEach((child, idx) => {
+          groups[idx % groupCount].mesh.add(child);
+        });
+
+        console.log('Venator ready:', groups.map(g => `${g.name}: ${g.mesh.children.length}`));
 
         modelProgress.set(1);
         modelLoaded.set(true);
-        cachedGroups = groups;
-        resolve(groups);
+        cachedResult = { groups, root };
+        resolve(cachedResult);
       },
       (progress) => {
         if (progress.total > 0) {

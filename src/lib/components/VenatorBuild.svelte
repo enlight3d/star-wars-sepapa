@@ -15,31 +15,48 @@
 
   onMount(async () => {
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 20);
+    scene.background = new THREE.Color(0x000005);
+
+    // Camera — will be repositioned after model loads
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 100000);
+    camera.position.set(2000, 1000, 2000);
     camera.lookAt(0, 0, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    const ambient = new THREE.AmbientLight(0x404040, 2);
+    // Lighting — brighter for space scene
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambient);
-    const directional = new THREE.DirectionalLight(0xffffff, 3);
-    directional.position.set(5, 10, 5);
+    const directional = new THREE.DirectionalLight(0xffffff, 1.5);
+    directional.position.set(100, 200, 100);
     scene.add(directional);
-    const rimLight = new THREE.DirectionalLight(0x4fc3f7, 1);
-    rimLight.position.set(-5, 0, -5);
+    const rimLight = new THREE.DirectionalLight(0x4fc3f7, 0.5);
+    rimLight.position.set(-100, -50, -100);
     scene.add(rimLight);
 
     const confetti = createConfetti(scene);
 
     let groups: BrickGroup[] = [];
+    let orbitRadius = 2000;
+
     try {
-      groups = await loadVenator();
+      const result = await loadVenator();
+      groups = result.groups;
+      scene.add(result.root);
       showLoading = false;
-      for (const g of groups) scene.add(g.mesh);
+
+      // Calculate camera distance based on model size
+      const box = new THREE.Box3().setFromObject(result.root);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      orbitRadius = maxDim * 0.9;
+      camera.position.set(orbitRadius * 0.8, orbitRadius * 0.4, orbitRadius * 0.8);
+      camera.lookAt(0, 0, 0);
+
+      console.log('VenatorBuild: model added to scene, orbit radius:', orbitRadius);
     } catch (err) {
       console.error('Failed to load Venator model:', err);
       showLoading = false;
@@ -63,9 +80,11 @@
       lastTime = timestamp;
       const cappedDt = Math.min(dt, 0.05);
 
+      // Camera orbit
       angle += 0.003;
-      camera.position.x = Math.sin(angle) * 20;
-      camera.position.z = Math.cos(angle) * 20;
+      camera.position.x = Math.sin(angle) * orbitRadius;
+      camera.position.z = Math.cos(angle) * orbitRadius;
+      camera.position.y = orbitRadius * 0.35;
       camera.lookAt(0, 0, 0);
 
       if (!paused) {
