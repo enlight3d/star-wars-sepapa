@@ -104,88 +104,26 @@ export function playTerminalDenied() {
   osc.stop(t + 0.4);
 }
 
-// ── Game sounds ──────────────────────────────────────────────────
-export function playLaserShoot() {
-  const ctx = getAudioContext();
-  const t = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(900, t);
-  osc.frequency.exponentialRampToValueAtTime(300, t + 0.1);
-  gain.gain.setValueAtTime(0.07, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-  osc.start(t);
-  osc.stop(t + 0.1);
+// ── Game sounds (real MP3s via Howler.js) ────────────────────────
+// Lazy-loaded Howl instances (only create on first play)
+const sounds: Record<string, Howl> = {};
+
+function getSound(name: string, src: string, volume = 0.5, loop = false): Howl {
+  if (!sounds[name]) {
+    sounds[name] = new Howl({ src: [`${base}/audio/${src}`], volume, loop, preload: true });
+  }
+  return sounds[name];
 }
 
-export function playEnemyLaser() {
-  const ctx = getAudioContext();
-  const t = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(600, t);
-  osc.frequency.exponentialRampToValueAtTime(200, t + 0.12);
-  gain.gain.setValueAtTime(0.04, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-  osc.start(t);
-  osc.stop(t + 0.12);
-}
-
-export function playExplosion() {
-  const ctx = getAudioContext();
-  const t = ctx.currentTime;
-
-  // Noise burst via oscillator detune trick
-  const osc1 = ctx.createOscillator();
-  const osc2 = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc1.connect(gain);
-  osc2.connect(gain);
-  gain.connect(ctx.destination);
-
-  osc1.type = 'sawtooth';
-  osc1.frequency.setValueAtTime(150, t);
-  osc1.frequency.exponentialRampToValueAtTime(40, t + 0.3);
-
-  osc2.type = 'square';
-  osc2.frequency.setValueAtTime(80, t);
-  osc2.frequency.exponentialRampToValueAtTime(20, t + 0.3);
-
-  gain.gain.setValueAtTime(0.1, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-
-  osc1.start(t);
-  osc1.stop(t + 0.3);
-  osc2.start(t);
-  osc2.stop(t + 0.3);
-}
-
-export function playPlayerHit() {
-  const ctx = getAudioContext();
-  const t = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(300, t);
-  osc.frequency.linearRampToValueAtTime(100, t + 0.2);
-  gain.gain.setValueAtTime(0.12, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-  osc.start(t);
-  osc.stop(t + 0.25);
-}
+export function playLaserShoot() { getSound('xwing-fire', 'xwing-fire.mp3', 0.3).play(); }
+export function playEnemyLaser() { getSound('tie-blaster', 'tie-blaster.mp3', 0.25).play(); }
+export function playExplosion() { getSound('explosion', 'explosion.mp3', 0.5).play(); }
+export function playPlayerHit() { getSound('alarm', 'alarm.mp3', 0.3).play(); }
 
 export function playGameOver() {
   const ctx = getAudioContext();
   const t = ctx.currentTime;
-  // Descending ominous tone
+  // Descending ominous tone (keep synth)
   [400, 350, 250, 150].forEach((freq, i) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -203,7 +141,7 @@ export function playGameOver() {
 export function playVictory() {
   const ctx = getAudioContext();
   const t = ctx.currentTime;
-  // Ascending triumphant fanfare
+  // Ascending triumphant fanfare (keep synth)
   [400, 500, 600, 800].forEach((freq, i) => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -217,6 +155,13 @@ export function playVictory() {
     osc.stop(t + i * 0.15 + 0.25);
   });
 }
+
+// NEW cinematic sound effects
+export function playTieScream(vol = 0.35) { getSound('tie-scream', 'tie-scream.mp3', vol).play(); }
+export function playR2D2() { getSound('r2d2', 'r2d2.mp3', 0.3).play(); }
+export function playChewbacca() { getSound('chewbacca', 'chewbacca.mp3', 0.5).play(); }
+export function playSonicCharge() { getSound('sonic', 'sonic-charge.mp3', 0.4).play(); }
+export function playBattleAlarm() { getSound('battle-alarm', 'alarm.mp3', 0.3).play(); }
 
 // ── Star Wars theme (MP3 file) ──────────────────────────────────
 import { Howl } from 'howler';

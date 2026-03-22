@@ -3,12 +3,18 @@ import {
   drawXWing, drawTIE, drawTurret, drawLaser,
   drawTrenchWall, drawTrenchFloor, drawExplosion,
   drawPixelText, drawShieldIcon, drawTargetingReticle, drawExhaustPort,
-  drawCrossbar, drawWallProtrusion, drawVerticalPipe
+  drawCrossbar, drawWallProtrusion, drawVerticalPipe,
+  drawEngineTrails, drawLaserWallGlow, drawScreenFlash,
+  drawWingmanXWing, drawMillenniumFalcon,
+  drawPhaseTransitionOverlay, drawGreenScanLine,
+  spawnWallSparks, updateAndDrawSparks
 } from './sprites';
-import type { ProtrusionType } from './sprites';
+import type { ProtrusionType, Spark } from './sprites';
 import {
   playLaserShoot, playEnemyLaser, playExplosion,
-  playPlayerHit, playGameOver, playVictory
+  playPlayerHit, playGameOver, playVictory,
+  playTieScream, playR2D2, playChewbacca,
+  playSonicCharge, playBattleAlarm
 } from '$lib/audio/audioManager';
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -108,8 +114,11 @@ const PHASE3_END = PHASE3_START + PHASE3_INTRO_DURATION + PHASE3_GAMEPLAY_DURATI
 const RADIO_MESSAGES: { time: number; speaker: string; text: string; duration: number }[] = [
   { time: PHASE1_START, speaker: 'RED LEADER', text: 'Restez en formation, approche de la tranchee...', duration: PHASE1_INTRO_DURATION },
   { time: PHASE2_START, speaker: 'WEDGE', text: 'Des chasseurs TIE derriere nous !', duration: PHASE2_INTRO_DURATION },
-  { time: PHASE2_GAMEPLAY_START + 15, speaker: 'BIGGS', text: 'Je ne peux pas les semer !', duration: 3 },
+  { time: PHASE2_GAMEPLAY_START + 10, speaker: 'BIGGS', text: 'Touche ! Je decroche !', duration: 2.5 },
+  { time: PHASE2_GAMEPLAY_START + 18, speaker: 'WEDGE', text: 'Je ne peux pas les semer !', duration: 2.5 },
   { time: PHASE3_START, speaker: 'OBI-WAN', text: 'Utilise la Force, Alexis...', duration: PHASE3_INTRO_DURATION },
+  // Han Solo arrival at ~80% of Phase 3
+  { time: PHASE3_GAMEPLAY_START + PHASE3_GAMEPLAY_DURATION * 0.8, speaker: 'HAN', text: 'Yahoo ! C\'est parti !', duration: 2.5 },
 ];
 
 export function createTrenchRun(
@@ -216,6 +225,36 @@ export function createTrenchRun(
   let targetingProgress = 0;
   let exhaustPortY = -50;
   let exhaustPortSize = 8;
+
+  // ── Cinematic state ──────────────────────────────────────────────
+  // Wingmen (cosmetic X-Wings)
+  let wingman1Alive = true;
+  let wingman2Alive = true;
+  let wingman1DestroyedTime = -1;
+  let wingman2DestroyedTime = -1;
+
+  // Han Solo arrival
+  let hanSoloTriggered = false;
+  let hanSoloTimer = 0;
+  let hanSoloY = 0; // Falcon Y position for swooping animation
+
+  // Wall scrape sparks
+  const wallSparks: Spark[] = [];
+
+  // Screen flash
+  let screenFlashAlpha = 0;
+  let screenFlashTimer = 0;
+
+  // Phase transition effects
+  let phaseTransitionProgress = -1; // -1 means inactive
+  let greenScanProgress = -1;
+  let previousPhase = 0;
+
+  // Sound event tracking (avoid repeating)
+  let phase1SoundPlayed = false;
+  let phase2SoundPlayed = false;
+  let phase3SoundPlayed = false;
+  let tieSpawnSoundCooldown = 0;
 
   // Victory sequence
   let victoryTriggered = false;
@@ -447,11 +486,108 @@ export function createTrenchRun(
       }
     }
 
+    // ── Cinematic sound triggers ──
+    // Phase 1 start: R2-D2 beep
+    if (state.elapsed >= PHASE1_START && !phase1SoundPlayed) {
+      phase1SoundPlayed = true;
+      playR2D2();
+    }
+    // Phase 2 start: battle alarm + TIE scream
+    if (state.elapsed >= PHASE2_START && !phase2SoundPlayed) {
+      phase2SoundPlayed = true;
+      playBattleAlarm();
+      setTimeout(() => playTieScream(), 300);
+    }
+    // Phase 3 start: R2-D2 beep for Obi-Wan
+    if (state.elapsed >= PHASE3_START && !phase3SoundPlayed) {
+      phase3SoundPlayed = true;
+      playR2D2();
+    }
+
+    // ── Phase transition tracking ──
+    const newPhase = getCurrentPhase(state.elapsed);
+    if (newPhase !== previousPhase && previousPhase > 0) {
+      phaseTransitionProgress = 0;
+    }
+    previousPhase = newPhase;
+    if (phaseTransitionProgress >= 0 && phaseTransitionProgress < 1) {
+      phaseTransitionProgress += dt / 2.5;
+      if (phaseTransitionProgress >= 1) phaseTransitionProgress = -1;
+    }
+
+    // ── Phase 3 green scan line ──
+    if (state.elapsed >= PHASE3_START && state.elapsed < PHASE3_GAMEPLAY_START) {
+      const introP = (state.elapsed - PHASE3_START) / PHASE3_INTRO_DURATION;
+      if (introP > 0.4 && introP < 0.8) {
+        greenScanProgress = (introP - 0.4) / 0.4;
+      } else {
+        greenScanProgress = -1;
+      }
+    } else {
+      greenScanProgress = -1;
+    }
+
+    // ── Wingmen destruction ──
+    if (wingman1Alive && state.elapsed >= PHASE2_GAMEPLAY_START + 10) {
+      wingman1Alive = false;
+      wingman1DestroyedTime = state.elapsed;
+      playExplosion();
+      screenFlashAlpha = 0.2;
+      screenFlashTimer = 0.1;
+      screenShakeTimer = SCREEN_SHAKE_DURATION;
+      screenShakeIntensity = SCREEN_SHAKE_INTENSITY;
+    }
+    if (wingman2Alive && state.elapsed >= PHASE2_GAMEPLAY_START + 18) {
+      wingman2Alive = false;
+      wingman2DestroyedTime = state.elapsed;
+      playExplosion();
+      screenFlashAlpha = 0.2;
+      screenFlashTimer = 0.1;
+      screenShakeTimer = SCREEN_SHAKE_DURATION;
+      screenShakeIntensity = SCREEN_SHAKE_INTENSITY;
+    }
+
+    // ── Han Solo arrival ──
+    const hanSoloTime = PHASE3_GAMEPLAY_START + PHASE3_GAMEPLAY_DURATION * 0.8;
+    if (!hanSoloTriggered && state.elapsed >= hanSoloTime) {
+      hanSoloTriggered = true;
+      hanSoloTimer = 0;
+      hanSoloY = ch + 60;
+      playChewbacca();
+      setTimeout(() => playSonicCharge(), 500);
+      // Destroy all on-screen TIEs
+      for (const t of ties) {
+        explosions.push({ x: t.x, y: t.y, frame: 0, maxFrames: EXPLOSION_FRAMES, big: true });
+      }
+      if (ties.length > 0) {
+        screenFlashAlpha = 0.25;
+        screenFlashTimer = 0.15;
+        screenShakeTimer = SCREEN_SHAKE_DURATION * 2;
+        screenShakeIntensity = BIG_SHAKE_INTENSITY;
+      }
+      ties.length = 0;
+    }
+    if (hanSoloTriggered && hanSoloTimer < 3) {
+      hanSoloTimer += dt;
+      // Falcon swoops from bottom to top
+      hanSoloY = ch + 60 - hanSoloTimer * (ch + 120) / 2;
+    }
+
+    // ── Screen flash decay ──
+    if (screenFlashTimer > 0) {
+      screenFlashTimer -= dt;
+      if (screenFlashTimer <= 0) screenFlashAlpha = 0;
+    }
+
+    // ── TIE spawn sound cooldown ──
+    tieSpawnSoundCooldown = Math.max(0, tieSpawnSoundCooldown - dt);
+
     // Victory sequence
     if (state.elapsed >= PHASE3_END && !victoryTriggered) {
       victoryTriggered = true;
       bulletTimeActive = false;
       bulletTimeFactor = 1;
+      playSonicCharge(); // Death Star explosion sound
       playVictory();
     }
 
@@ -513,6 +649,16 @@ export function createTrenchRun(
     const padY = playerVisualH * 0.45;
     player.x = Math.max(bounds.left + padX, Math.min(bounds.right - padX, player.x));
     player.y = Math.max(padY + 10, Math.min(ch - padY - 20, player.y));
+
+    // Wall scrape sparks — spawn when close to walls
+    const distToLeft = player.x - player.hitW / 2 - bounds.left;
+    const distToRight = bounds.right - (player.x + player.hitW / 2);
+    if (distToLeft < 10 * scale && Math.random() > 0.5) {
+      wallSparks.push(...spawnWallSparks(bounds.left, player.y, 'left'));
+    }
+    if (distToRight < 10 * scale && Math.random() > 0.5) {
+      wallSparks.push(...spawnWallSparks(bounds.right, player.y, 'right'));
+    }
 
     // Fire
     if (controls.fire && fireCooldown <= 0) {
@@ -587,6 +733,11 @@ export function createTrenchRun(
         // Phase 2: TIEs come from behind sometimes
         const fromBehind = phase === 2 && Math.random() > 0.4;
         spawnTIE(fromBehind);
+        // Brief TIE scream on spawn (with cooldown to avoid spam)
+        if (tieSpawnSoundCooldown <= 0) {
+          playTieScream(0.15);
+          tieSpawnSoundCooldown = 3;
+        }
         // Extra TIE at higher intensity
         if (phaseProgress > 0.5 && Math.random() > 0.5) {
           spawnTIE(!fromBehind);
@@ -864,28 +1015,70 @@ export function createTrenchRun(
       drawTurret(ctx, t.x + t.w / 2, t.y + t.h / 2, scale, t.facingRight, t.aimAngle);
     }
 
-    // TIE Fighters — bank based on sine movement
-    for (const tie of ties) {
-      const cosVal = Math.cos(tie.sineOffset);
-      const tieBank = cosVal > 0.3 ? 'right' : cosVal < -0.3 ? 'left' : 'center';
-      drawTIE(ctx, tie.x, tie.y, scale, tieBank);
+    // ── Wingmen (cosmetic X-Wings, Phase 1-2) ──
+    if (wingman1Alive && state.elapsed < PHASE2_GAMEPLAY_START + 10) {
+      const wm1x = player.x - 55 * scale;
+      const wm1y = player.y + 35 * scale;
+      drawEngineTrails(ctx, wm1x, wm1y, scale * 0.85, 'xwing');
+      drawWingmanXWing(ctx, wm1x, wm1y, scale, 0.85);
+    }
+    if (wingman2Alive && state.elapsed < PHASE2_GAMEPLAY_START + 18) {
+      const wm2x = player.x + 55 * scale;
+      const wm2y = player.y + 40 * scale;
+      drawEngineTrails(ctx, wm2x, wm2y, scale * 0.85, 'xwing');
+      drawWingmanXWing(ctx, wm2x, wm2y, scale, 0.85);
     }
 
-    // Lasers
+    // Wingman destruction explosions (brief)
+    if (wingman1DestroyedTime > 0 && state.elapsed - wingman1DestroyedTime < 1) {
+      const wm1x = player.x - 55 * scale;
+      const wm1y = player.y + 35 * scale;
+      const f = Math.floor((state.elapsed - wingman1DestroyedTime) * 30);
+      drawExplosion(ctx, wm1x, wm1y, f, BIG_EXPLOSION_FRAMES, true);
+    }
+    if (wingman2DestroyedTime > 0 && state.elapsed - wingman2DestroyedTime < 1) {
+      const wm2x = player.x + 55 * scale;
+      const wm2y = player.y + 40 * scale;
+      const f = Math.floor((state.elapsed - wingman2DestroyedTime) * 30);
+      drawExplosion(ctx, wm2x, wm2y, f, BIG_EXPLOSION_FRAMES, true);
+    }
+
+    // TIE Fighters — engine trails first, then sprite
+    for (const t of ties) {
+      drawEngineTrails(ctx, t.x, t.y, scale, 'tie');
+      const cosVal = Math.cos(t.sineOffset);
+      const tieBank = cosVal > 0.3 ? 'right' : cosVal < -0.3 ? 'left' : 'center';
+      drawTIE(ctx, t.x, t.y, scale, tieBank);
+    }
+
+    // Lasers + wall glow
     for (const l of lasers) {
       drawLaser(ctx, l.x, l.y, l.isEnemy);
+      drawLaserWallGlow(ctx, l.x, l.y, l.isEnemy, bounds.left, bounds.right);
     }
 
-    // Player — bank based on movement direction
+    // Player — engine trails first, then sprite
     const showPlayer = player.invincibleTimer <= 0 || Math.sin(player.flashPhase) > 0;
     if (showPlayer && !state.gameOver) {
+      drawEngineTrails(ctx, player.x, player.y, scale, 'xwing');
       const playerBank = controls.left ? 'left' : controls.right ? 'right' : 'center';
       drawXWing(ctx, player.x, player.y, scale, playerBank);
     }
 
+    // Wall scrape sparks
+    updateAndDrawSparks(ctx, wallSparks, 0.016);
+
     // Explosions
     for (const e of explosions) {
       drawExplosion(ctx, e.x, e.y, e.frame, e.maxFrames, e.big);
+    }
+
+    // Screen flash from explosions
+    drawScreenFlash(ctx, cw, ch, screenFlashAlpha);
+
+    // ── Han Solo / Millennium Falcon ──
+    if (hanSoloTriggered && hanSoloTimer < 3) {
+      drawMillenniumFalcon(ctx, (bounds.left + bounds.right) / 2, hanSoloY, scale);
     }
 
     // Phase 3: Targeting reticle overlay
@@ -952,29 +1145,37 @@ export function createTrenchRun(
       );
     }
 
-    // ── Phase intro overlay ──
+    // ── Phase intro overlay with cinematic transitions ──
     if (phaseIntroActive) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(-5, -5, cw + 10, ch + 10);
-
       const phase = getCurrentPhase(state.elapsed);
       const introStart = getPhaseStartTime(phase);
-      const introProgress = (state.elapsed - introStart) / (getPhaseGameplayStart(phase) - introStart);
+      const introDuration = getPhaseGameplayStart(phase) - introStart;
+      const introProgress = (state.elapsed - introStart) / introDuration;
 
-      // Phase number (big)
+      // Phase transition overlay (dim + red flash + static)
+      drawPhaseTransitionOverlay(ctx, cw, ch, introProgress, phase, 0);
+
+      // Phase number (big) — slides in from right
       const phaseTextSize = Math.round(hudPixelSize * 3);
       const fadeIn = Math.min(introProgress * 3, 1);
-      ctx.globalAlpha = fadeIn;
+      const slideOut = introProgress > 0.7 ? (introProgress - 0.7) / 0.3 : 0;
+      const slideX = slideOut > 0 ? cw / 2 - slideOut * cw * 0.6 : cw / 2 + (1 - Math.min(introProgress * 4, 1)) * cw * 0.4;
+      ctx.globalAlpha = fadeIn * (1 - slideOut);
 
       let phaseTitle = '';
       if (phase === 1) phaseTitle = 'STAY ON TARGET';
       else if (phase === 2) phaseTitle = 'WATCH YOUR BACK!';
       else phaseTitle = 'USE THE FORCE';
 
-      drawPixelText(ctx, `PHASE ${phase}`, cw / 2, ch / 2 - phaseTextSize * 5, '#ffd700', phaseTextSize, 'center');
-      drawPixelText(ctx, phaseTitle, cw / 2, ch / 2, '#ff4444', Math.round(phaseTextSize * 0.7), 'center');
+      drawPixelText(ctx, `PHASE ${phase}`, slideX, ch / 2 - phaseTextSize * 5, '#ffd700', phaseTextSize, 'center');
+      drawPixelText(ctx, phaseTitle, slideX, ch / 2, '#ff4444', Math.round(phaseTextSize * 0.7), 'center');
 
       ctx.globalAlpha = 1;
+
+      // Phase 3: green scan line
+      if (phase === 3 && greenScanProgress >= 0) {
+        drawGreenScanLine(ctx, cw, ch, greenScanProgress);
+      }
     }
 
     // ── Game Over Screen ──
@@ -1066,6 +1267,36 @@ export function createTrenchRun(
     comboTimer = 0;
     lastKillTime = 0;
     activeRadio = null;
+
+    // Reset cinematic state
+    wallSparks.length = 0;
+    screenFlashAlpha = 0;
+    screenFlashTimer = 0;
+    phaseTransitionProgress = -1;
+    greenScanProgress = -1;
+    tieSpawnSoundCooldown = 0;
+    // Reset wingmen/Han Solo based on restart phase
+    if (checkpointPhase <= 1) {
+      wingman1Alive = true;
+      wingman2Alive = true;
+      wingman1DestroyedTime = -1;
+      wingman2DestroyedTime = -1;
+      phase1SoundPlayed = false;
+      phase2SoundPlayed = false;
+      phase3SoundPlayed = false;
+    } else if (checkpointPhase === 2) {
+      wingman1Alive = true;
+      wingman2Alive = true;
+      wingman1DestroyedTime = -1;
+      wingman2DestroyedTime = -1;
+      phase2SoundPlayed = false;
+      phase3SoundPlayed = false;
+    } else {
+      phase3SoundPlayed = false;
+    }
+    hanSoloTriggered = false;
+    hanSoloTimer = 0;
+    previousPhase = 0;
 
     // Reset shown radio indices for current + future phases
     for (let i = 0; i < RADIO_MESSAGES.length; i++) {

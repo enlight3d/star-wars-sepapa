@@ -375,7 +375,7 @@ export function drawLaser(ctx: CanvasRenderingContext2D, x: number, y: number, i
   ctx.restore();
 }
 
-// ── Trench Walls — Death Star surface greebling ──────────────────────
+// ── Trench Walls — Death Star surface greebling (enhanced) ───────────
 export function drawTrenchWall(
   ctx: CanvasRenderingContext2D,
   x: number, y: number, w: number, h: number,
@@ -383,178 +383,225 @@ export function drawTrenchWall(
 ) {
   const ps = PS;
 
-  // Base wall color — dark metallic
-  ctx.fillStyle = '#1a1a26';
+  // Layer 1: Base dark metal — almost black with slight blue
+  ctx.fillStyle = '#0d0d16';
   ctx.fillRect(x, y, w, h);
 
-  // Dense greebling: many small rectangles at slightly different shades
-  const greebleShades = ['#16161f', '#1e1e2c', '#222234', '#262638', '#1c1c28', '#202030'];
-  const greebleH = 14;
-  const greebleOff = scrollOffset % greebleH;
-
-  // Seed-based pseudo-random for consistent greeble pattern
-  for (let gy = y - greebleOff - greebleH; gy < y + h + greebleH; gy += greebleH) {
-    for (let gx = x; gx < x + w; gx += 8) {
-      if (gy < y - 2 || gy > y + h) continue;
-      const hash = ((gx * 7 + gy * 13 + 37) & 0xff);
-      const shade = greebleShades[hash % greebleShades.length];
-      const gw = 4 + (hash % 5) * 2;
-      const gh = 4 + ((hash >> 3) % 4) * 2;
+  // Layer 2: Panel grid — two scales with depth illusion
+  // Large panels (16x16)
+  const largePanelSize = 16;
+  const largePanelOff = (scrollOffset * 0.9) % largePanelSize; // parallax: 0.9x
+  for (let py = y - largePanelOff - largePanelSize; py < y + h + largePanelSize; py += largePanelSize) {
+    for (let px2 = x; px2 < x + w; px2 += largePanelSize) {
+      if (py < y - 2 || py > y + h) continue;
+      const hash = ((px2 * 7 + py * 13 + 37) & 0xff);
+      // Panel fill — darker than base
+      const shade = hash % 3 === 0 ? '#0a0a12' : hash % 3 === 1 ? '#0c0c18' : '#0b0b14';
       ctx.fillStyle = shade;
-      ctx.fillRect(
-        Math.round(gx),
-        Math.round(gy),
-        Math.min(gw, x + w - gx),
-        Math.min(gh, y + h - gy)
-      );
+      ctx.fillRect(Math.round(px2), Math.round(py), Math.min(largePanelSize, x + w - px2), largePanelSize);
+      // Top/left border (lighter — depth illusion)
+      ctx.fillStyle = '#18182a';
+      ctx.fillRect(Math.round(px2), Math.round(py), Math.min(largePanelSize, x + w - px2), 1);
+      ctx.fillRect(Math.round(px2), Math.round(py), 1, largePanelSize);
+
+      // Small panels (6x8) inside large panels
+      for (let sy = py + 2; sy < py + largePanelSize - 2; sy += 8) {
+        for (let sx = px2 + 2; sx < px2 + largePanelSize - 2; sx += 6) {
+          if (sx >= x + w || sy > y + h) continue;
+          const smallHash = ((sx * 3 + sy * 11 + 71) & 0xff);
+          ctx.fillStyle = smallHash % 4 === 0 ? '#080810' : '#090912';
+          const sw = Math.min(5, x + w - sx);
+          ctx.fillRect(Math.round(sx), Math.round(sy), sw, 7);
+        }
+      }
     }
   }
 
-  // Horizontal panel seam lines (conduits)
-  const panelH = 32;
-  const panelOff = scrollOffset % panelH;
-  ctx.fillStyle = '#0e0e18';
-  for (let py = y - panelOff; py < y + h; py += panelH) {
-    if (py < y - ps) continue;
-    ctx.fillRect(x, Math.round(py), w, ps);
-  }
-  // Highlight below each seam
-  ctx.fillStyle = '#2e2e42';
-  for (let py = y - panelOff + ps; py < y + h; py += panelH) {
-    if (py < y) continue;
-    ctx.fillRect(x, Math.round(py), w, 1);
-  }
-
-  // Vertical panel seam lines at regular intervals
-  const vertSpacing = 24;
-  ctx.fillStyle = '#0e0e18';
-  for (let vx = x; vx < x + w; vx += vertSpacing) {
-    ctx.fillRect(Math.round(vx), y, 1, h);
-  }
-  // Highlight next to each vertical seam
-  ctx.fillStyle = '#2a2a3c';
-  for (let vx = x + 1; vx < x + w; vx += vertSpacing) {
-    ctx.fillRect(Math.round(vx), y, 1, h);
-  }
-
-  // Horizontal pipe / conduit (chunky, near inner edge)
-  if (w > 20) {
+  // Layer 3: Pipe clusters — horizontal and vertical
+  if (w > 16) {
     const isLeft = x < w;
-    const pipeX = isLeft ? x + w - 10 : x + 4;
-    // Dark pipe body
-    ctx.fillStyle = '#1c1c2e';
-    ctx.fillRect(pipeX, y, ps * 3, h);
-    // Pipe highlight (top edge)
-    ctx.fillStyle = '#3a3a52';
-    ctx.fillRect(pipeX, y, ps, h);
-    // Pipe shadow (bottom edge)
-    ctx.fillStyle = '#101020';
-    ctx.fillRect(pipeX + ps * 2, y, ps, h);
+    // Thick pipes (3-4px)
+    const pipeX1 = isLeft ? x + w - 10 : x + 4;
+    const pipeThick = ps * 2;
+    ctx.fillStyle = '#12122a';
+    ctx.fillRect(pipeX1, y, pipeThick + ps, h);
+    // Highlight on top edge (light from above)
+    ctx.fillStyle = '#2a2a4a';
+    ctx.fillRect(pipeX1, y, ps, h);
+    // Shadow bottom edge
+    ctx.fillStyle = '#080818';
+    ctx.fillRect(pipeX1 + pipeThick, y, ps, h);
 
     // Pipe joints / brackets
-    ctx.fillStyle = '#3a3a55';
-    for (let py2 = y - (scrollOffset % 48); py2 < y + h; py2 += 48) {
+    ctx.fillStyle = '#2e2e4a';
+    for (let py2 = y - (scrollOffset % 36); py2 < y + h; py2 += 36) {
       if (py2 < y - 4) continue;
-      ctx.fillRect(pipeX - ps, Math.round(py2), ps * 5, ps * 2);
-      // Bolt on bracket
-      ctx.fillStyle = '#4a4a60';
-      ctx.fillRect(pipeX, Math.round(py2 + 1), ps, ps);
+      ctx.fillRect(pipeX1 - ps, Math.round(py2), pipeThick + ps * 3, ps * 2);
       ctx.fillStyle = '#3a3a55';
+      ctx.fillRect(pipeX1, Math.round(py2 + 1), ps, ps);
+      ctx.fillStyle = '#2e2e4a';
     }
 
-    // Second pipe (thinner)
-    if (w > 30) {
-      const pipe2X = isLeft ? x + w - 20 : x + 14;
-      ctx.fillStyle = '#1e1e30';
-      ctx.fillRect(pipe2X, y, ps * 2, h);
-      ctx.fillStyle = '#2e2e44';
-      ctx.fillRect(pipe2X, y, 1, h);
+    // Second thinner pipe
+    if (w > 24) {
+      const pipeX2 = isLeft ? x + w - 20 : x + 14;
+      ctx.fillStyle = '#10102a';
+      ctx.fillRect(pipeX2, y, ps * 2, h);
+      ctx.fillStyle = '#222244';
+      ctx.fillRect(pipeX2, y, 1, h);
+    }
+
+    // Third pipe (vertical)
+    if (w > 35) {
+      const pipeX3 = isLeft ? x + 8 : x + w - 14;
+      ctx.fillStyle = '#0e0e24';
+      ctx.fillRect(pipeX3, y, ps + 1, h);
+      ctx.fillStyle = '#1e1e3a';
+      ctx.fillRect(pipeX3, y, 1, h);
     }
   }
 
-  // Amber indicator lights
-  if (w > 16) {
-    const lightSpacing = 64;
+  // Layer 4: Indicator light clusters
+  if (w > 14) {
+    const lightSpacing = 48;
     const lightOff = scrollOffset % lightSpacing;
     const isLeft = x < w;
-    const lightX = isLeft ? x + w - 18 : x + 14;
+    const lightBaseX = isLeft ? x + w - 18 : x + 12;
 
     for (let ly = y - lightOff; ly < y + h; ly += lightSpacing) {
-      if (ly < y - ps || ly > y + h) continue;
-      // Amber light pixel block
-      ctx.fillStyle = '#ff8c00';
-      ctx.fillRect(Math.round(lightX), Math.round(ly), ps * 2, ps * 2);
-      // Glow halo (dithered)
-      ctx.globalAlpha = 0.4;
-      ctx.fillStyle = '#ff6600';
-      ctx.fillRect(Math.round(lightX - ps), Math.round(ly - ps), ps * 4, ps * 4);
+      if (ly < y - ps || ly > y + h - ps) continue;
+      const hash = ((ly * 7 + x * 3) & 0xff);
+
+      // Cluster of 2-3 lights
+      const clusterCount = 2 + (hash % 2);
+      for (let ci = 0; ci < clusterCount; ci++) {
+        const lx = lightBaseX + ci * (ps * 3);
+        const lightType = (hash + ci * 37) % 10;
+
+        let color: string;
+        let glowColor: string;
+        let blink = false;
+
+        if (lightType < 4) {
+          // Amber (most common)
+          color = '#ff8c00';
+          glowColor = '#ff6600';
+          blink = lightType === 0;
+        } else if (lightType < 7) {
+          // Red (warning)
+          color = '#cc2222';
+          glowColor = '#ff0000';
+          blink = lightType === 4;
+        } else if (lightType < 9) {
+          // Green (status)
+          color = '#22aa44';
+          glowColor = '#00ff44';
+          blink = false;
+        } else {
+          // Blue (rare)
+          color = '#2266cc';
+          glowColor = '#4488ff';
+          blink = false;
+        }
+
+        // Blinking logic
+        if (blink && Math.sin(scrollOffset * 0.12 + ly * 0.1 + ci) < 0) continue;
+
+        // Glow halo
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = glowColor;
+        ctx.fillRect(Math.round(lx - ps), Math.round(ly - ps), ps * 4, ps * 4);
+        ctx.globalAlpha = 1;
+
+        // Light body
+        ctx.fillStyle = color;
+        ctx.fillRect(Math.round(lx), Math.round(ly), ps * 2, ps * 2);
+        // Bright center
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 0.4;
+        ctx.fillRect(Math.round(lx + 1), Math.round(ly + 1), ps, ps);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  // Layer 5: Depth shadows — inner edge gradient
+  if (x <= 1) {
+    // Left wall — shadow on right edge (inner trench)
+    for (let i = 0; i < 6; i++) {
+      ctx.globalAlpha = 0.15 * (1 - i / 6);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(x + w - ps * (6 - i), y, ps, h);
+    }
+    ctx.globalAlpha = 1;
+    // Bright inner edge
+    ctx.fillStyle = '#2a2a44';
+    ctx.fillRect(x + w - ps, y, ps, h);
+  } else {
+    // Right wall — shadow on left edge (inner trench)
+    for (let i = 0; i < 6; i++) {
+      ctx.globalAlpha = 0.15 * (1 - i / 6);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(x + ps * i, y, ps, h);
+    }
+    ctx.globalAlpha = 1;
+    // Bright inner edge
+    ctx.fillStyle = '#2a2a44';
+    ctx.fillRect(x, y, ps, h);
+  }
+
+  // Layer 6: Surface weathering — streaks and scorch marks
+  const streakSpacing = 80;
+  const streakOff = scrollOffset % streakSpacing;
+  for (let sy = y - streakOff; sy < y + h; sy += streakSpacing) {
+    if (sy < y - 8 || sy > y + h) continue;
+    const hash = ((sy * 13 + x * 7) & 0xff);
+    if (hash % 3 === 0) {
+      // Dark streak
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#060608';
+      const streakW = 3 + (hash % 8);
+      const streakH = 12 + (hash % 20);
+      const streakX = x + (hash % Math.max(1, Math.floor(w - streakW)));
+      ctx.fillRect(Math.round(streakX), Math.round(sy), streakW, streakH);
       ctx.globalAlpha = 1;
-      // Bright center
-      ctx.fillStyle = '#ffcc44';
-      ctx.fillRect(Math.round(lightX + 1), Math.round(ly + 1), ps, ps);
     }
-
-    // Red lights (offset from amber)
-    for (let ly = y - ((scrollOffset + 32) % lightSpacing); ly < y + h; ly += lightSpacing) {
-      if (ly < y - ps || ly > y + h) continue;
-      ctx.fillStyle = '#cc2222';
-      ctx.fillRect(Math.round(lightX + 8), Math.round(ly), ps, ps * 2);
-      ctx.fillStyle = '#ff4444';
-      ctx.fillRect(Math.round(lightX + 8), Math.round(ly), ps, ps);
-    }
-
-    // Green status lights (sparse)
-    for (let ly = y - ((scrollOffset + 50) % (lightSpacing * 2)); ly < y + h; ly += lightSpacing * 2) {
-      if (ly < y - ps || ly > y + h) continue;
-      ctx.fillStyle = '#22aa44';
-      ctx.fillRect(Math.round(lightX - 6), Math.round(ly), ps, ps);
+    if (hash % 5 === 0) {
+      // Scorch mark (dark radial)
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#080808';
+      const scX = x + (hash % Math.max(1, Math.floor(w - 10)));
+      ctx.fillRect(Math.round(scX), Math.round(sy), 8, 6);
+      ctx.globalAlpha = 1;
     }
   }
 
   // Vent grates
-  if (w > 30) {
-    const ventSpacing = 96;
+  if (w > 28) {
+    const ventSpacing = 80;
     const ventOff = scrollOffset % ventSpacing;
     const isLeft = x < w;
     const ventX = isLeft ? x + 6 : x + w - 20;
     for (let vy = y - ventOff + 30; vy < y + h; vy += ventSpacing) {
       if (vy < y || vy + 14 > y + h) continue;
-      // Vent recess
-      ctx.fillStyle = '#08080e';
+      ctx.fillStyle = '#04040a';
       ctx.fillRect(ventX, Math.round(vy), ps * 6, ps * 6);
-      // Horizontal slats
-      ctx.fillStyle = '#1e1e30';
+      ctx.fillStyle = '#161630';
       for (let sl = 0; sl < 6; sl += 2) {
         ctx.fillRect(ventX, Math.round(vy + sl * ps), ps * 6, ps);
       }
-      // Border
-      ctx.fillStyle = '#2a2a3e';
+      ctx.fillStyle = '#222240';
       ctx.fillRect(ventX, Math.round(vy), ps * 6, 1);
       ctx.fillRect(ventX, Math.round(vy + ps * 6 - 1), ps * 6, 1);
     }
   }
 
-  // Inner edge highlight (where trench floor meets wall)
-  if (x <= 1) {
-    // Left wall — bright edge on right
-    ctx.fillStyle = '#3e3e56';
-    ctx.fillRect(x + w - ps, y, ps, h);
-    ctx.fillStyle = '#2a2a40';
-    ctx.fillRect(x + w - ps * 2, y, ps, h);
-  } else {
-    // Right wall — bright edge on left
-    ctx.fillStyle = '#3e3e56';
-    ctx.fillRect(x, y, ps, h);
-    ctx.fillStyle = '#2a2a40';
-    ctx.fillRect(x + ps, y, ps, h);
-  }
-
   // Outer edge shadow
   if (x <= 1) {
-    ctx.fillStyle = '#0a0a12';
+    ctx.fillStyle = '#060610';
     ctx.fillRect(x, y, ps, h);
   } else {
-    ctx.fillStyle = '#0a0a12';
+    ctx.fillStyle = '#060610';
     ctx.fillRect(x + w - ps, y, ps, h);
   }
 }
@@ -568,15 +615,15 @@ export function drawTrenchFloor(
   const w = right - left;
   const ps = PS;
 
-  // Dark floor base
-  ctx.fillStyle = '#060610';
+  // Very dark base
+  ctx.fillStyle = '#050510';
   ctx.fillRect(left, 0, w, height);
 
   // Surface detail panels (subtle shade variation)
   const detailH = 24;
   const detailW = 20;
   const detailOff = scrollOffset % detailH;
-  const panelShades = ['#08081a', '#0a0a16', '#0c0c1e', '#070714'];
+  const panelShades = ['#06061a', '#080814', '#0a0a1e', '#050512'];
   for (let dy = -detailOff; dy < height; dy += detailH) {
     for (let dx = left; dx < right; dx += detailW) {
       const hash = ((dx * 11 + dy * 7 + 53) & 0xff);
@@ -585,72 +632,100 @@ export function drawTrenchFloor(
     }
   }
 
-  // Grid lines — glowing cyan/blue
+  // Grid lines — dark cyan (#0a2a3a)
   const gridSize = 32;
   const gridOffsetY = scrollOffset % gridSize;
 
-  // Horizontal grid — dim cyan
-  ctx.fillStyle = '#0c1830';
+  // Horizontal grid
+  ctx.fillStyle = '#0a2a3a';
   for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
     ctx.fillRect(left, Math.round(gy), w, ps);
   }
-  // Brighter blue glow around horizontal lines
-  ctx.globalAlpha = 0.15;
-  ctx.fillStyle = '#2244aa';
+  // Subtle glow around horizontal lines
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = '#1a4466';
   for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
     ctx.fillRect(left, Math.round(gy - 1), w, ps + 2);
   }
   ctx.globalAlpha = 1;
 
   // Vertical grid
-  ctx.fillStyle = '#0c1830';
+  ctx.fillStyle = '#0a2a3a';
   for (let gx = left; gx <= right; gx += gridSize) {
     ctx.fillRect(Math.round(gx), 0, ps, height);
   }
-  // Glow
-  ctx.globalAlpha = 0.15;
-  ctx.fillStyle = '#2244aa';
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = '#1a4466';
   for (let gx = left; gx <= right; gx += gridSize) {
     ctx.fillRect(Math.round(gx - 1), 0, ps + 2, height);
   }
   ctx.globalAlpha = 1;
 
   // Grid intersections — brighter dots
-  ctx.fillStyle = '#1a3060';
+  ctx.fillStyle = '#104050';
   for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
     for (let gx = left; gx <= right; gx += gridSize) {
-      ctx.fillRect(Math.round(gx), Math.round(gy), ps, ps);
+      ctx.fillRect(Math.round(gx), Math.round(gy), ps + 1, ps + 1);
     }
   }
 
-  // Center groove (trench channel)
+  // Center channel with green/cyan glow (exhaust port path)
   const cx = Math.round((left + right) / 2);
-  const grooveW = Math.round(w * 0.1);
-  ctx.fillStyle = '#040410';
+  const grooveW = Math.round(w * 0.12);
+  ctx.fillStyle = '#030410';
   ctx.fillRect(cx - grooveW / 2, 0, grooveW, height);
   // Groove edge highlights — cyan glow
-  ctx.fillStyle = '#1a2a50';
+  ctx.fillStyle = '#0a3a50';
   ctx.fillRect(cx - grooveW / 2, 0, ps, height);
   ctx.fillRect(cx + grooveW / 2 - ps, 0, ps, height);
-  // Subtle inner groove detail
-  ctx.fillStyle = '#0a1228';
+  // Center subtle green/cyan glow
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = '#22ccaa';
+  ctx.fillRect(cx - grooveW / 4, 0, grooveW / 2, height);
+  ctx.globalAlpha = 1;
+  // Inner groove detail
+  ctx.fillStyle = '#081828';
   ctx.fillRect(cx - ps, 0, ps * 2, height);
 
-  // Surface detail blocks (equipment, hatches)
-  const blockSpacing = 64;
+  // Floor details: hatches, grates, vent openings
+  const blockSpacing = 52;
   const blockOff = scrollOffset % blockSpacing;
   for (let dy = -blockOff; dy < height; dy += blockSpacing) {
     if (dy < -12) continue;
-    // Left side equipment block
-    ctx.fillStyle = '#0e1020';
-    ctx.fillRect(left + 10, Math.round(dy + 6), ps * 5, ps * 3);
-    ctx.fillStyle = '#141830';
-    ctx.fillRect(left + 10, Math.round(dy + 6), ps * 5, 1);
-    // Right side
-    ctx.fillStyle = '#0e1020';
-    ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, ps * 3);
-    ctx.fillStyle = '#141830';
-    ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, 1);
+    const hash = ((dy * 17 + 41) & 0xff);
+    // Left side detail
+    if (hash % 3 === 0) {
+      // Hatch
+      ctx.fillStyle = '#0c1420';
+      ctx.fillRect(left + 8, Math.round(dy + 4), ps * 6, ps * 4);
+      ctx.fillStyle = '#142030';
+      ctx.fillRect(left + 8, Math.round(dy + 4), ps * 6, 1);
+      ctx.fillRect(left + 8, Math.round(dy + 4 + ps * 4 - 1), ps * 6, 1);
+      // Handle
+      ctx.fillStyle = '#1a3040';
+      ctx.fillRect(left + 12, Math.round(dy + 6), ps * 3, ps);
+    } else {
+      // Grate
+      ctx.fillStyle = '#080e18';
+      ctx.fillRect(left + 10, Math.round(dy + 6), ps * 5, ps * 3);
+      ctx.fillStyle = '#0e1a28';
+      ctx.fillRect(left + 10, Math.round(dy + 6), ps * 5, 1);
+    }
+    // Right side detail
+    if (hash % 4 === 0) {
+      // Vent opening
+      ctx.fillStyle = '#060c14';
+      ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, ps * 3);
+      ctx.fillStyle = '#0a1420';
+      for (let sl = 0; sl < 3; sl++) {
+        ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6 + sl * ps), ps * 5, 1);
+      }
+    } else {
+      ctx.fillStyle = '#0a1020';
+      ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, ps * 3);
+      ctx.fillStyle = '#121c30';
+      ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, 1);
+    }
   }
 }
 
@@ -1389,5 +1464,326 @@ export function drawVerticalPipe(
     ctx.globalAlpha = 1;
   }
 
+  ctx.restore();
+}
+
+// ── Engine Trails ────────────────────────────────────────────────────
+export function drawEngineTrails(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, scale: number,
+  type: 'xwing' | 'tie'
+) {
+  ctx.save();
+  const ps = PS;
+  if (type === 'xwing') {
+    // Two engine trails from X-Wing, blue/cyan fading
+    const engineOffsets = [
+      { dx: -6 * scale, dy: 18 * scale },
+      { dx: 6 * scale, dy: 18 * scale },
+    ];
+    for (const off of engineOffsets) {
+      const ex = x + off.dx;
+      const ey = y + off.dy;
+      const trailLen = 22;
+      for (let i = 0; i < trailLen; i++) {
+        const t = i / trailLen;
+        const alpha = (1 - t) * 0.7;
+        const width = ps * (2.5 - t * 1.5);
+        ctx.globalAlpha = alpha;
+        // Gradient from bright cyan to blue
+        const r = Math.round(100 * (1 - t));
+        const g = Math.round(180 + 75 * (1 - t));
+        const b = 255;
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(
+          Math.round(ex - width / 2),
+          Math.round(ey + i * ps),
+          Math.round(width),
+          ps
+        );
+      }
+      // Core glow
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#ccffff';
+      ctx.fillRect(Math.round(ex - ps * 0.5), Math.round(ey), ps, ps * 3);
+    }
+  } else {
+    // TIE engine trails — faint blue-white
+    const engineOffsets = [
+      { dx: -2 * scale, dy: 12 * scale },
+      { dx: 2 * scale, dy: 12 * scale },
+    ];
+    for (const off of engineOffsets) {
+      const ex = x + off.dx;
+      const ey = y + off.dy;
+      const trailLen = 12;
+      for (let i = 0; i < trailLen; i++) {
+        const t = i / trailLen;
+        const alpha = (1 - t) * 0.3;
+        const width = ps * (1.5 - t);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = `rgb(180,200,255)`;
+        ctx.fillRect(
+          Math.round(ex - width / 2),
+          Math.round(ey + i * ps),
+          Math.round(Math.max(1, width)),
+          ps
+        );
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── Laser Wall Lighting ──────────────────────────────────────────────
+export function drawLaserWallGlow(
+  ctx: CanvasRenderingContext2D,
+  laserX: number, laserY: number,
+  isEnemy: boolean,
+  leftWallEdge: number, rightWallEdge: number
+) {
+  ctx.save();
+  const glowRadius = 30;
+  const glowColor = isEnemy ? '#ff2222' : '#22ff22';
+
+  // Check proximity to left wall
+  const distLeft = laserX - leftWallEdge;
+  if (distLeft > 0 && distLeft < glowRadius) {
+    const intensity = 1 - distLeft / glowRadius;
+    ctx.globalAlpha = 0.15 * intensity;
+    ctx.fillStyle = glowColor;
+    ctx.fillRect(
+      Math.round(leftWallEdge - 5),
+      Math.round(laserY - 15),
+      10,
+      30
+    );
+  }
+
+  // Check proximity to right wall
+  const distRight = rightWallEdge - laserX;
+  if (distRight > 0 && distRight < glowRadius) {
+    const intensity = 1 - distRight / glowRadius;
+    ctx.globalAlpha = 0.15 * intensity;
+    ctx.fillStyle = glowColor;
+    ctx.fillRect(
+      Math.round(rightWallEdge - 5),
+      Math.round(laserY - 15),
+      10,
+      30
+    );
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── Wall Scrape Sparks ───────────────────────────────────────────────
+export interface Spark {
+  x: number; y: number; vx: number; vy: number; life: number; maxLife: number;
+}
+
+export function spawnWallSparks(px: number, py: number, side: 'left' | 'right'): Spark[] {
+  const sparks: Spark[] = [];
+  const count = 3 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < count; i++) {
+    sparks.push({
+      x: px,
+      y: py + (Math.random() - 0.5) * 10,
+      vx: (side === 'left' ? 1 : -1) * (40 + Math.random() * 80),
+      vy: (Math.random() - 0.5) * 120,
+      life: 0.15 + Math.random() * 0.2,
+      maxLife: 0.15 + Math.random() * 0.2,
+    });
+  }
+  return sparks;
+}
+
+export function updateAndDrawSparks(
+  ctx: CanvasRenderingContext2D,
+  sparks: Spark[],
+  dt: number
+) {
+  ctx.save();
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i];
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.life -= dt;
+    if (s.life <= 0) { sparks.splice(i, 1); continue; }
+    const t = s.life / s.maxLife;
+    ctx.globalAlpha = t * 0.9;
+    // Orange to yellow sparks
+    const g = Math.round(120 + 135 * (1 - t));
+    ctx.fillStyle = `rgb(255,${g},0)`;
+    const size = Math.max(1, Math.round(t * 3));
+    ctx.fillRect(Math.round(s.x), Math.round(s.y), size, size);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── Screen Flash ─────────────────────────────────────────────────────
+export function drawScreenFlash(
+  ctx: CanvasRenderingContext2D,
+  cw: number, ch: number, alpha: number
+) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(alpha, 0.25);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cw, ch);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── Wingman X-Wing (cosmetic, slightly behind player) ────────────────
+export function drawWingmanXWing(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, scale: number,
+  alpha: number
+) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  drawEngineTrails(ctx, x, y, scale, 'xwing');
+  drawXWing(ctx, x, y, scale * 0.85, 'center');
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── Millennium Falcon (simple shape) ─────────────────────────────────
+export function drawMillenniumFalcon(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, scale: number
+) {
+  ctx.save();
+  const s = scale * 1.2;
+  const ps = PS;
+
+  // Engine trails behind Falcon
+  for (let i = 0; i < 18; i++) {
+    const t = i / 18;
+    ctx.globalAlpha = (1 - t) * 0.6;
+    const w = ps * (8 - t * 5) * s;
+    ctx.fillStyle = `rgb(${Math.round(100 + 155 * (1 - t))},${Math.round(150 + 105 * (1 - t))},255)`;
+    ctx.fillRect(Math.round(x - w / 2), Math.round(y + 22 * s + i * ps * 1.5), Math.round(w), ps * 2);
+  }
+  ctx.globalAlpha = 1;
+
+  // Main disc body
+  const r = 18 * s;
+  ctx.fillStyle = '#8888a0';
+  for (let dy = -r; dy <= r; dy += ps) {
+    for (let dx = -r; dx <= r; dx += ps) {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist <= r) {
+        // Shade variation
+        const shade = dist < r * 0.5 ? '#9999b0' : dist < r * 0.8 ? '#7777a0' : '#666690';
+        ctx.fillStyle = shade;
+        ctx.fillRect(Math.round(x + dx), Math.round(y + dy), ps, ps);
+      }
+    }
+  }
+
+  // Cockpit (right side tube)
+  ctx.fillStyle = '#6666a0';
+  ctx.fillRect(Math.round(x + r * 0.6), Math.round(y - 4 * s), Math.round(8 * s), Math.round(8 * s));
+  ctx.fillStyle = '#4499cc';
+  ctx.fillRect(Math.round(x + r * 0.6 + 2 * s), Math.round(y - 2 * s), Math.round(3 * s), Math.round(4 * s));
+
+  // Front mandibles
+  const mandibleW = 6 * s;
+  const mandibleH = 14 * s;
+  // Left mandible
+  ctx.fillStyle = '#7777a0';
+  ctx.fillRect(Math.round(x - mandibleW - 2 * s), Math.round(y - r - mandibleH), Math.round(mandibleW), Math.round(mandibleH));
+  ctx.fillStyle = '#8888b0';
+  ctx.fillRect(Math.round(x - mandibleW - 2 * s), Math.round(y - r - mandibleH), Math.round(mandibleW), ps);
+  // Right mandible
+  ctx.fillStyle = '#7777a0';
+  ctx.fillRect(Math.round(x + 2 * s), Math.round(y - r - mandibleH), Math.round(mandibleW), Math.round(mandibleH));
+  ctx.fillStyle = '#8888b0';
+  ctx.fillRect(Math.round(x + 2 * s), Math.round(y - r - mandibleH), Math.round(mandibleW), ps);
+
+  // Radar dish on top
+  ctx.fillStyle = '#aaaacc';
+  ctx.fillRect(Math.round(x - 3 * s), Math.round(y - 5 * s), Math.round(6 * s), Math.round(6 * s));
+  ctx.fillStyle = '#ccccee';
+  ctx.fillRect(Math.round(x - 1 * s), Math.round(y - 3 * s), Math.round(2 * s), Math.round(2 * s));
+
+  // Panel lines
+  ctx.fillStyle = '#555580';
+  ctx.fillRect(Math.round(x - r * 0.7), Math.round(y), Math.round(r * 1.4), 1);
+  ctx.fillRect(Math.round(x), Math.round(y - r * 0.5), 1, Math.round(r));
+
+  ctx.restore();
+}
+
+// ── Phase Transition Effects ─────────────────────────────────────────
+export function drawPhaseTransitionOverlay(
+  ctx: CanvasRenderingContext2D,
+  cw: number, ch: number,
+  progress: number, // 0-1
+  phase: number,
+  warningFlashTimer: number
+) {
+  ctx.save();
+
+  // Screen dim
+  ctx.globalAlpha = 0.7 * Math.min(progress * 4, 1, (1 - progress) * 4);
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, cw, ch);
+
+  // Red warning flashes (2 pulses in first 40% of transition)
+  if (progress < 0.4) {
+    const flashPhase = progress / 0.4 * 2; // 0 to 2
+    const flashIntensity = Math.sin(flashPhase * Math.PI);
+    if (flashIntensity > 0.3) {
+      ctx.globalAlpha = flashIntensity * 0.2;
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(0, 0, cw, ch);
+    }
+  }
+
+  // Radio static effect (flickering white noise bars)
+  if (progress > 0.1 && progress < 0.6) {
+    ctx.globalAlpha = 0.08;
+    for (let i = 0; i < 20; i++) {
+      const sy = Math.random() * ch;
+      const sh = 1 + Math.random() * 3;
+      const bright = Math.round(100 + Math.random() * 155);
+      ctx.fillStyle = `rgb(${bright},${bright},${bright})`;
+      ctx.fillRect(0, Math.round(sy), cw, sh);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── Green Scan Line (Phase 3 special) ────────────────────────────────
+export function drawGreenScanLine(
+  ctx: CanvasRenderingContext2D,
+  cw: number, ch: number,
+  progress: number // 0-1, sweeps top to bottom
+) {
+  if (progress < 0 || progress > 1) return;
+  ctx.save();
+  const y = progress * ch;
+  const lineH = 3;
+  // Main bright line
+  ctx.globalAlpha = 0.8;
+  ctx.fillStyle = '#44ff44';
+  ctx.fillRect(0, Math.round(y), cw, lineH);
+  // Glow above
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#22ff22';
+  ctx.fillRect(0, Math.round(y - 8), cw, 8);
+  // Trail below
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#22ff44';
+  ctx.fillRect(0, Math.round(y + lineH), cw, 30);
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
