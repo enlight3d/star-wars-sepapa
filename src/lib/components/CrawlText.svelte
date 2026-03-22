@@ -75,7 +75,7 @@
     width: 100%;
     text-align: justify;
     text-align-last: center;
-    animation: crawl 55s linear forwards;
+    animation: crawl 45s linear forwards;
   }
 
   .crawl-content p {
