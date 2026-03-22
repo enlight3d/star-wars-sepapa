@@ -127,20 +127,22 @@ const tie: SpriteSet = {
   loaded: { center: false, left: false, right: false }
 };
 
+import { base } from '$app/paths';
+
 function initSprites() {
   xwing.center.onload = () => { xwing.loaded.center = true; };
   xwing.left.onload = () => { xwing.loaded.left = true; };
   xwing.right.onload = () => { xwing.loaded.right = true; };
-  xwing.center.src = '/sprites/xwing.png';
-  xwing.left.src = '/sprites/xwing_left.png';
-  xwing.right.src = '/sprites/xwing_right.png';
+  xwing.center.src = `${base}/sprites/xwing.png`;
+  xwing.left.src = `${base}/sprites/xwing_left.png`;
+  xwing.right.src = `${base}/sprites/xwing_right.png`;
 
   tie.center.onload = () => { tie.loaded.center = true; };
   tie.left.onload = () => { tie.loaded.left = true; };
   tie.right.onload = () => { tie.loaded.right = true; };
-  tie.center.src = '/sprites/tie.png';
-  tie.left.src = '/sprites/tie_left.png';
-  tie.right.src = '/sprites/tie_right.png';
+  tie.center.src = `${base}/sprites/tie.png`;
+  tie.left.src = `${base}/sprites/tie_left.png`;
+  tie.right.src = `${base}/sprites/tie_right.png`;
 }
 
 initSprites();

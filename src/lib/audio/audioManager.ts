@@ -220,13 +220,14 @@ export function playVictory() {
 
 // ── Star Wars theme (MP3 file) ──────────────────────────────────
 import { Howl } from 'howler';
+import { base } from '$app/paths';
 
 let starWarsTheme: Howl | null = null;
 
 export function playStarWarsTheme() {
   if (!starWarsTheme) {
     starWarsTheme = new Howl({
-      src: ['/audio/star-wars-theme.mp3'],
+      src: [`${base}/audio/star-wars-theme.mp3`],
       volume: 0.7,
     });
   }

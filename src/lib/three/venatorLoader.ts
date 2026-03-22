@@ -3,6 +3,7 @@ import { LDrawLoader } from 'three/examples/jsm/loaders/LDrawLoader.js';
 import { LDrawConditionalLineMaterial } from 'three/examples/jsm/materials/LDrawConditionalLineMaterial.js';
 import { contributors } from '$lib/data/config';
 import { modelProgress, modelLoaded } from '$lib/stores/gameState';
+import { base } from '$app/paths';
 
 export interface VenatorModel {
   root: THREE.Group;
@@ -24,10 +25,10 @@ export async function loadVenator(): Promise<VenatorModel> {
   loadingPromise = (async () => {
     const loader = new LDrawLoader();
     loader.setConditionalLineMaterial(LDrawConditionalLineMaterial);
-    loader.setPartsLibraryPath('/models/ldraw/');
+    loader.setPartsLibraryPath(`${base}/models/ldraw/`);
 
     modelProgress.set(0.1);
-    const model = await (loader as any).loadAsync('/models/venator.mpd', (progress: any) => {
+    const model = await (loader as any).loadAsync(`${base}/models/venator.mpd`, (progress: any) => {
       if (progress.total > 0) {
         modelProgress.set((progress.loaded / progress.total) * 0.4);
       }
