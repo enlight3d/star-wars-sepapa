@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as THREE from 'three';
-  import { loadVenator, type BrickGroup } from '$lib/three/venatorLoader';
+  import { loadVenator, type VenatorModel } from '$lib/three/venatorLoader';
   import { createConfetti } from '$lib/three/particles';
   import { modelProgress } from '$lib/stores/gameState';
 
@@ -12,12 +12,13 @@
   let showBudgetAlert = $state(false);
   let budgetMessage = $state('');
   let showLoading = $state(true);
+  let brickCount = $state(0);
+  let totalBricks = $state(0);
 
   onMount(async () => {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000005);
 
-    // Camera — will be repositioned after model loads
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 100000);
     camera.position.set(2000, 1000, 2000);
     camera.lookAt(0, 0, 0);
@@ -27,7 +28,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // Lighting — brighter for space scene
+    // Lighting
     const ambient = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambient);
     const directional = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -39,24 +40,18 @@
 
     const confetti = createConfetti(scene);
 
-    let groups: BrickGroup[] = [];
-    let orbitRadius = 2000;
-
+    let venator: VenatorModel;
     try {
-      const result = await loadVenator();
-      groups = result.groups;
-      scene.add(result.root);
+      venator = await loadVenator();
+      scene.add(venator.root);
+      totalBricks = venator.bricks.length;
       showLoading = false;
 
       // Calculate camera distance based on model size
-      const box = new THREE.Box3().setFromObject(result.root);
+      const box = new THREE.Box3().setFromObject(venator.root);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       orbitRadius = maxDim * 0.9;
-      camera.position.set(orbitRadius * 0.8, orbitRadius * 0.4, orbitRadius * 0.8);
-      camera.lookAt(0, 0, 0);
-
-      console.log('VenatorBuild: model added to scene, orbit radius:', orbitRadius);
     } catch (err) {
       console.error('Failed to load Venator model:', err);
       showLoading = false;
@@ -64,14 +59,18 @@
       return;
     }
 
-    let currentGroup = 0;
-    let revealTimer = 0;
-    const REVEAL_INTERVAL = 3;
-    const HALF_POINT = Math.ceil(groups.length / 2);
+    let orbitRadius = 2000;
     let angle = 0;
     let animId: number;
-    let paused = false;
     let lastTime = 0;
+
+    // Brick-by-brick animation state
+    let nextBrickIdx = 0;
+    let brickTimer = 0;
+    const BRICKS_PER_SECOND = 80; // Speed of brick assembly
+    const halfPoint = Math.ceil(venator.bricks.length / 2);
+    let paused = false;
+    let currentContributorIdx = -1;
 
     function animate(timestamp: number) {
       animId = requestAnimationFrame(animate);
@@ -81,29 +80,49 @@
       const cappedDt = Math.min(dt, 0.05);
 
       // Camera orbit
-      angle += 0.003;
+      angle += 0.002;
       camera.position.x = Math.sin(angle) * orbitRadius;
       camera.position.z = Math.cos(angle) * orbitRadius;
       camera.position.y = orbitRadius * 0.35;
       camera.lookAt(0, 0, 0);
 
-      if (!paused) {
-        revealTimer += cappedDt;
-        if (revealTimer >= REVEAL_INTERVAL && currentGroup < groups.length) {
-          if (currentGroup === HALF_POINT) {
-            paused = true;
-            showBudgetAlert = true;
-            budgetMessage = "ALERTE — BUDGET IMPÉRIAL ÉPUISÉ";
-            setTimeout(() => {
-              budgetMessage = "Comme pour l'Étoile de la Mort, le projet n'est pas tout à fait terminé...\n\nÀ toi de finir la construction, Commandant !";
-            }, 2500);
-            setTimeout(() => confetti.start(), 5000);
-            setTimeout(() => onComplete(), 9000);
-          } else {
-            groups[currentGroup].mesh.visible = true;
-            currentContributor = groups[currentGroup].name;
-            currentGroup++;
-            revealTimer = 0;
+      if (!paused && nextBrickIdx < venator.bricks.length) {
+        brickTimer += cappedDt;
+        const bricksToAdd = Math.floor(brickTimer * BRICKS_PER_SECOND);
+
+        if (bricksToAdd > 0) {
+          brickTimer -= bricksToAdd / BRICKS_PER_SECOND;
+
+          for (let i = 0; i < bricksToAdd && nextBrickIdx < venator.bricks.length; i++) {
+            // Check if we hit the halfway point
+            if (nextBrickIdx === halfPoint) {
+              paused = true;
+              showBudgetAlert = true;
+              budgetMessage = "ALERTE — BUDGET IMPÉRIAL ÉPUISÉ";
+              setTimeout(() => {
+                budgetMessage = "Comme pour l'Étoile de la Mort, le projet n'est pas tout à fait terminé...\n\nÀ toi de finir la construction, Commandant !";
+              }, 2500);
+              setTimeout(() => confetti.start(), 5000);
+              setTimeout(() => onComplete(), 9000);
+              break;
+            }
+
+            // Reveal next brick
+            venator.bricks[nextBrickIdx].visible = true;
+            nextBrickIdx++;
+            brickCount = nextBrickIdx;
+
+            // Update contributor name when entering a new group
+            const group = venator.contributorGroups.find(
+              g => nextBrickIdx >= g.startIdx && nextBrickIdx < g.endIdx
+            );
+            if (group) {
+              const groupIdx = venator.contributorGroups.indexOf(group);
+              if (groupIdx !== currentContributorIdx) {
+                currentContributorIdx = groupIdx;
+                currentContributor = group.name;
+              }
+            }
           }
         }
       }
@@ -132,10 +151,16 @@
 <div class="venator-scene" bind:this={container}>
   {#if showLoading}
     <div class="loading">
-      <p>ASSEMBLAGE DU VAISSEAU EN COURS...</p>
+      <p>RÉCEPTION ET DÉBALLAGE DES MATÉRIAUX...</p>
       <div class="progress-bar">
         <div class="progress-fill" style="width: {$modelProgress * 100}%"></div>
       </div>
+    </div>
+  {/if}
+
+  {#if !showLoading && totalBricks > 0}
+    <div class="brick-counter">
+      {brickCount} / {totalBricks} briques
     </div>
   {/if}
 
@@ -161,6 +186,7 @@
   .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; text-align: center; color: var(--imperial-amber); font-family: monospace; }
   .progress-bar { width: 300px; height: 6px; background: #333; margin-top: 1rem; border-radius: 3px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--imperial-amber); transition: width 0.3s ease; }
+  .brick-counter { position: absolute; top: 20px; right: 20px; z-index: 20; color: var(--sw-yellow); font-family: monospace; font-size: clamp(0.8rem, 2vw, 1rem); opacity: 0.7; }
   .contributor-name { position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); z-index: 20; color: var(--sw-yellow); font-family: 'Star Jedi', sans-serif; font-size: clamp(1.5rem, 5vw, 3rem); text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); animation: fadeInUp 0.5s ease; }
   .budget-alert { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.7); animation: flicker 0.1s ease-in-out 5; }
   .alert-box { background: rgba(10, 10, 10, 0.9); border: 2px solid var(--sw-red); padding: 2rem 3rem; max-width: 500px; text-align: center; }
