@@ -1,5 +1,6 @@
 import type { Controls } from './controls';
 import { drawXWing, drawTIE, drawTurret, drawLaser, drawTrenchWall, drawExplosion } from './sprites';
+import { playLaserShoot, playEnemyLaser, playExplosion, playPlayerHit, playGameOver, playVictory } from '$lib/audio/audioManager';
 
 // ── Types ───────────────────────────────────────────────────────────
 interface Vec2 { x: number; y: number; }
@@ -167,9 +168,11 @@ export function createTrenchRun(
     player.invincibleTimer = INVINCIBILITY_DURATION;
     screenShakeTimer = SCREEN_SHAKE_DURATION;
     state.hp--;
+    playPlayerHit();
     if (state.hp <= 0) {
       state.gameOver = true;
       state.running = false;
+      playGameOver();
     }
   }
 
@@ -180,6 +183,7 @@ export function createTrenchRun(
     // End sequence
     if (state.elapsed >= DURATION && !endTriggered) {
       endTriggered = true;
+      playVictory();
     }
     if (endTriggered) {
       endFadeAlpha = Math.min(endFadeAlpha + dt * 1.5, 0.85);
@@ -230,6 +234,7 @@ export function createTrenchRun(
         });
       }
       fireCooldown = FIRE_COOLDOWN;
+      playLaserShoot();
     }
 
     // Spawn enemies
@@ -328,6 +333,7 @@ export function createTrenchRun(
           ties.splice(j, 1);
           lasers.splice(i, 1);
           state.score += 100;
+          playExplosion();
           break;
         }
       }
@@ -344,6 +350,7 @@ export function createTrenchRun(
           turrets.splice(j, 1);
           lasers.splice(i, 1);
           state.score += 100;
+          playExplosion();
           break;
         }
       }

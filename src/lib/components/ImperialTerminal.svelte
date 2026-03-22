@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { password } from '$lib/data/config';
-  import { playTerminalBeep } from '$lib/audio/audioManager';
+  import { playTerminalBeep, playTerminalGranted, playTerminalDenied } from '$lib/audio/audioManager';
 
   let { onComplete }: { onComplete: () => void } = $props();
 
@@ -15,9 +15,11 @@
   function handleSubmit() {
     if (inputValue.toLowerCase().trim() === password.toLowerCase().trim()) {
       status = 'granted';
+      playTerminalGranted();
       setTimeout(onComplete, 2000);
     } else {
       status = 'denied';
+      playTerminalDenied();
       setTimeout(() => {
         status = 'idle';
         inputValue = '';

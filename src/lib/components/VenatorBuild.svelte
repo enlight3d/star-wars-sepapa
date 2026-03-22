@@ -4,6 +4,7 @@
   import { loadVenator, type VenatorModel } from '$lib/three/venatorLoader';
   import { createConfetti } from '$lib/three/particles';
   import { modelProgress } from '$lib/stores/gameState';
+  import { playBrickPlace, playBudgetAlert } from '$lib/audio/audioManager';
 
   let { onComplete }: { onComplete: () => void } = $props();
 
@@ -104,6 +105,7 @@
               paused = true;
               showBudgetAlert = true;
               budgetMessage = "ALERTE — BUDGET IMPÉRIAL ÉPUISÉ";
+              playBudgetAlert();
               setTimeout(() => {
                 budgetMessage = "Comme pour l'Étoile de la Mort, le projet n'est pas tout à fait terminé...\n\nÀ toi de finir la construction, Commandant !";
               }, 2500);
@@ -119,6 +121,7 @@
             brick.visible = true;
             droppingBricks.push({ obj: brick, targetY, elapsed: 0 });
             nextBrickIdx++;
+            if (nextBrickIdx % 15 === 0) playBrickPlace();
             brickCount = nextBrickIdx;
 
             // Update contributor name when entering a new group
