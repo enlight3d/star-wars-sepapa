@@ -110,37 +110,69 @@ const XWING_ROWS = [
 ];
 
 // ── Image-based sprites (loaded from PNG files) ─────────────────────
-let xwingImg: HTMLImageElement | null = null;
-let xwingLoaded = false;
-let tieImg: HTMLImageElement | null = null;
-let tieLoaded = false;
-
-function ensureSpritesLoaded() {
-  if (!xwingImg) {
-    xwingImg = new Image();
-    xwingImg.onload = () => { xwingLoaded = true; };
-    xwingImg.src = '/sprites/xwing.png';
-  }
-  if (!tieImg) {
-    tieImg = new Image();
-    tieImg.onload = () => { tieLoaded = true; };
-    tieImg.src = '/sprites/tie.png';
-  }
+interface SpriteSet {
+  center: HTMLImageElement;
+  left: HTMLImageElement;
+  right: HTMLImageElement;
+  loaded: { center: boolean; left: boolean; right: boolean };
 }
 
-// Call once to start loading
-ensureSpritesLoaded();
+const xwing: SpriteSet = {
+  center: new Image(), left: new Image(), right: new Image(),
+  loaded: { center: false, left: false, right: false }
+};
 
-export function drawXWing(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-  if (xwingLoaded && xwingImg) {
-    const w = xwingImg.width * scale * 1.2;
-    const h = xwingImg.height * scale * 1.2;
+const tie: SpriteSet = {
+  center: new Image(), left: new Image(), right: new Image(),
+  loaded: { center: false, left: false, right: false }
+};
+
+function initSprites() {
+  xwing.center.onload = () => { xwing.loaded.center = true; };
+  xwing.left.onload = () => { xwing.loaded.left = true; };
+  xwing.right.onload = () => { xwing.loaded.right = true; };
+  xwing.center.src = '/sprites/xwing.png';
+  xwing.left.src = '/sprites/xwing_left.png';
+  xwing.right.src = '/sprites/xwing_right.png';
+
+  tie.center.onload = () => { tie.loaded.center = true; };
+  tie.left.onload = () => { tie.loaded.left = true; };
+  tie.right.onload = () => { tie.loaded.right = true; };
+  tie.center.src = '/sprites/tie.png';
+  tie.left.src = '/sprites/tie_left.png';
+  tie.right.src = '/sprites/tie_right.png';
+}
+
+initSprites();
+
+// Size multiplier — controls how big sprites render (lower = smaller ships)
+const SPRITE_SCALE = 0.65;
+
+function drawImgSprite(
+  ctx: CanvasRenderingContext2D,
+  sprites: SpriteSet,
+  x: number, y: number, scale: number,
+  bank?: 'left' | 'right' | 'center'
+) {
+  const dir = bank || 'center';
+  const img = sprites[dir];
+  const loaded = sprites.loaded[dir];
+
+  if (loaded && img.complete) {
+    const w = img.width * scale * SPRITE_SCALE;
+    const h = img.height * scale * SPRITE_SCALE;
     ctx.save();
-    ctx.imageSmoothingEnabled = false; // Keep pixel art crisp
-    ctx.drawImage(xwingImg, x - w / 2, y - h / 2, w, h);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, x - w / 2, y - h / 2, w, h);
     ctx.restore();
-  } else {
-    // Fallback while loading
+    return true;
+  }
+  return false;
+}
+
+export function drawXWing(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, bank?: 'left' | 'right' | 'center') {
+  if (!drawImgSprite(ctx, xwing, x, y, scale, bank)) {
+    // Fallback
     ctx.save();
     drawSprite(ctx, XWING_ROWS, XWING_PALETTE, x, y, scale);
     ctx.restore();
@@ -204,15 +236,8 @@ const TIE_ROWS = [
   '..KKKK...................KKKK..', // row 31
 ];
 
-export function drawTIE(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
-  if (tieLoaded && tieImg) {
-    const w = tieImg.width * scale * 1.1;
-    const h = tieImg.height * scale * 1.1;
-    ctx.save();
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(tieImg, x - w / 2, y - h / 2, w, h);
-    ctx.restore();
-  } else {
+export function drawTIE(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, bank?: 'left' | 'right' | 'center') {
+  if (!drawImgSprite(ctx, tie, x, y, scale, bank)) {
     ctx.save();
     drawSprite(ctx, TIE_ROWS, TIE_PALETTE, x, y, scale);
     ctx.restore();

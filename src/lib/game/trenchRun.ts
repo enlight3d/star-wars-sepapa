@@ -742,9 +742,11 @@ export function createTrenchRun(
       drawTurret(ctx, t.x + t.w / 2, t.y + t.h / 2, scale, t.facingRight, t.aimAngle);
     }
 
-    // TIE Fighters
+    // TIE Fighters — bank based on sine movement
     for (const tie of ties) {
-      drawTIE(ctx, tie.x, tie.y, scale);
+      const cosVal = Math.cos(tie.sineOffset);
+      const tieBank = cosVal > 0.3 ? 'right' : cosVal < -0.3 ? 'left' : 'center';
+      drawTIE(ctx, tie.x, tie.y, scale, tieBank);
     }
 
     // Lasers
@@ -752,10 +754,11 @@ export function createTrenchRun(
       drawLaser(ctx, l.x, l.y, l.isEnemy);
     }
 
-    // Player (with invincibility flash)
+    // Player — bank based on movement direction
     const showPlayer = player.invincibleTimer <= 0 || Math.sin(player.flashPhase) > 0;
     if (showPlayer && !state.gameOver) {
-      drawXWing(ctx, player.x, player.y, scale);
+      const playerBank = controls.left ? 'left' : controls.right ? 'right' : 'center';
+      drawXWing(ctx, player.x, player.y, scale, playerBank);
     }
 
     // Explosions
