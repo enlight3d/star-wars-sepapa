@@ -14,7 +14,7 @@ import {
   playLaserShoot, playEnemyLaser, playExplosion,
   playPlayerHit, playGameOver, playVictory,
   playTieScream, playR2D2, playChewbacca,
-  playSonicCharge, playBattleAlarm
+  playSonicCharge, playBattleAlarm, stopAllGameSounds
 } from '$lib/audio/audioManager';
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -1224,6 +1224,7 @@ export function createTrenchRun(
 
   // ── Restart (from current phase checkpoint) ───────────────────────
   function restart() {
+    stopAllGameSounds();
     const restartPhase = checkpointPhase;
     const restartTime = getPhaseStartTime(restartPhase);
 

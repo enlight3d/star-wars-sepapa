@@ -115,6 +115,12 @@ function getSound(name: string, src: string, volume = 0.5, loop = false): Howl {
   return sounds[name];
 }
 
+export function stopAllGameSounds() {
+  for (const sound of Object.values(sounds)) {
+    sound.stop();
+  }
+}
+
 export function playLaserShoot() { getSound('xwing-fire', 'xwing-fire.mp3', 0.3).play(); }
 export function playEnemyLaser() { getSound('tie-blaster', 'tie-blaster.mp3', 0.25).play(); }
 export function playExplosion() { getSound('explosion', 'explosion.mp3', 0.5).play(); }

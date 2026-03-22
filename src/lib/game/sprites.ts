@@ -154,6 +154,26 @@ function ensureSpritesLoaded() {
   Object.defineProperty(tie.loaded, 'right', { get: trl });
 }
 
+// ── Texture images for walls/floor ──
+let wallTexture: HTMLImageElement | null = null;
+let wallTextureLoaded = false;
+let floorTexture: HTMLImageElement | null = null;
+let floorTextureLoaded = false;
+
+function ensureTexturesLoaded() {
+  if (typeof window === 'undefined') return;
+  if (!wallTexture) {
+    wallTexture = new Image();
+    wallTexture.onload = () => { wallTextureLoaded = true; };
+    wallTexture.src = `${base}/sprites/tiles/deathstar_wall.png`;
+  }
+  if (!floorTexture) {
+    floorTexture = new Image();
+    floorTexture.onload = () => { floorTextureLoaded = true; };
+    floorTexture.src = `${base}/sprites/tiles/deathstar_floor.png`;
+  }
+}
+
 // Size multiplier — controls how big sprites render (lower = smaller ships)
 const SPRITE_SCALE = 0.65;
 
@@ -383,9 +403,27 @@ export function drawTrenchWall(
 ) {
   const ps = PS;
 
-  // Layer 1: Base dark metal — almost black with slight blue
+  // Layer 0: Tile the Death Star texture as base
+  ensureTexturesLoaded();
+  if (wallTextureLoaded && wallTexture) {
+    const tileSize = 128; // scale the 256px texture down for denser greebling
+    const tileOffY = scrollOffset % tileSize;
+    ctx.save();
+    ctx.globalAlpha = 0.7; // blend with dark base
+    for (let ty = y - tileOffY - tileSize; ty < y + h + tileSize; ty += tileSize) {
+      for (let tx = x; tx < x + w; tx += tileSize) {
+        if (ty + tileSize < y || ty > y + h) continue;
+        ctx.drawImage(wallTexture, tx, ty, tileSize, tileSize);
+      }
+    }
+    ctx.restore();
+  }
+
+  // Layer 1: Base dark metal overlay — semi-transparent to let texture show through
+  ctx.globalAlpha = 0.4;
   ctx.fillStyle = '#0d0d16';
   ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = 1;
 
   // Layer 2: Panel grid — two scales with depth illusion
   // Large panels (16x16)
@@ -618,6 +656,21 @@ export function drawTrenchFloor(
   // Very dark base
   ctx.fillStyle = '#050510';
   ctx.fillRect(left, 0, w, height);
+
+  // Tile the floor texture at 0.5x parallax (deepest layer)
+  ensureTexturesLoaded();
+  if (floorTextureLoaded && floorTexture) {
+    const tileSize = 128;
+    const tileOffY = (scrollOffset * 0.5) % tileSize;
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    for (let ty = -tileOffY - tileSize; ty < height + tileSize; ty += tileSize) {
+      for (let tx = left; tx < right; tx += tileSize) {
+        ctx.drawImage(floorTexture, tx, ty, tileSize, tileSize);
+      }
+    }
+    ctx.restore();
+  }
 
   // ── LAYER 1 (deepest, slowest parallax 0.4x): Large structural plates ──
   const deepOff = (scrollOffset * 0.4) % 64;
