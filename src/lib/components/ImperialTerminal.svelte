@@ -92,92 +92,48 @@
     <div class="crt-glow"></div>
 
     <div class="dos-terminal">
-      <!-- Top border -->
-      <div class="border-top">
-        <span>┌──────────────────────────────────────────────────────────┐</span>
+      <!-- Header panel -->
+      <div class="panel header-panel">
+        <div class="header-text">█▀▀ IMPERIAL MILITARY TERMINAL ▀▀█</div>
+        <div class="header-sub">Station: DS-1 / Sector 7-G / Auth Required</div>
       </div>
 
-      <!-- Header -->
-      <div class="header-row">
-        <span>│</span>
-        <span class="header-text">█▀▀ IMPERIAL MILITARY TERMINAL ▀▀█</span>
-        <span>│</span>
-      </div>
-      <div class="header-row">
-        <span>│</span>
-        <span class="header-sub">Station: DS-1 / Sector 7-G / Auth Required</span>
-        <span>│</span>
-      </div>
-      <div class="separator">
-        <span>├──────────────────────────────────────────────────────────┤</span>
-      </div>
-
-      <!-- Boot log -->
-      <div class="log-area">
+      <!-- Boot log panel -->
+      <div class="panel log-panel">
         {#each bootLines as line}
-          <div class="log-row">
-            <span class="border-char">│</span>
-            <span class="log-line" class:ok={line.includes('OK')} class:warning={line.includes('WARNING')}>{line}</span>
-          </div>
+          <div class="log-line" class:ok={line.includes('OK')} class:warning={line.includes('WARNING')} class:empty={line === ''}>{line || '\u00A0'}</div>
         {/each}
       </div>
 
-      <!-- Input area -->
+      <!-- Input panel -->
       {#if bootDone}
-        <div class="separator">
-          <span>├──────────────────────────────────────────────────────────┤</span>
-        </div>
-
-        <div class="input-section">
-          <div class="prompt-row">
-            <span class="border-char">│</span>
-            <span class="prompt-label">IDENTIFICATION REQUISE</span>
-          </div>
-          <div class="prompt-row">
-            <span class="border-char">│</span>
-            <span class="prompt-label dim">Entrez votre code d'accès, Commandant.</span>
-          </div>
-          <div class="prompt-row">
-            <span class="border-char">│</span>
-            <span class="input-line">
-              <span class="prompt-symbol">C:\EMPIRE&gt; </span>
-              <input
-                type="text"
-                bind:value={inputValue}
-                onkeydown={handleKeydown}
-                oninput={handleInput}
-                class="terminal-input"
-                autofocus
-                autocomplete="off"
-                autocapitalize="off"
-                spellcheck="false"
-              />
-              <span class="cursor" class:visible={showCursor}>█</span>
-            </span>
+        <div class="panel input-panel">
+          <div class="prompt-label">IDENTIFICATION REQUISE</div>
+          <div class="prompt-label dim">Entrez votre code d'accès, Commandant.</div>
+          <div class="input-line">
+            <span class="prompt-symbol">C:\EMPIRE&gt; </span>
+            <input
+              type="text"
+              bind:value={inputValue}
+              onkeydown={handleKeydown}
+              oninput={handleInput}
+              class="terminal-input"
+              autofocus
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+            <span class="cursor" class:visible={showCursor}>█</span>
           </div>
 
           {#if status === 'denied'}
-            <div class="prompt-row">
-              <span class="border-char">│</span>
-              <span class="status-msg denied">██ ACCÈS REFUSÉ ██ Code invalide.</span>
-            </div>
+            <div class="status-msg denied">██ ACCÈS REFUSÉ ██ Code invalide.</div>
           {:else if status === 'granted'}
-            <div class="prompt-row">
-              <span class="border-char">│</span>
-              <span class="status-msg granted">██ ACCÈS AUTORISÉ ██</span>
-            </div>
-            <div class="prompt-row">
-              <span class="border-char">│</span>
-              <span class="status-msg granted dim">Bienvenue, Commandant. Ouverture du sas...</span>
-            </div>
+            <div class="status-msg granted">██ ACCÈS AUTORISÉ ██</div>
+            <div class="status-msg granted dim">Bienvenue, Commandant. Ouverture du sas...</div>
           {/if}
         </div>
       {/if}
-
-      <!-- Bottom border -->
-      <div class="border-bottom">
-        <span>└──────────────────────────────────────────────────────────┘</span>
-      </div>
 
       <!-- Status bar -->
       <div class="status-bar">
@@ -244,63 +200,51 @@
   .dos-terminal {
     position: relative;
     z-index: 2;
-    padding: clamp(0.5rem, 3vw, 2rem);
+    padding: clamp(0.8rem, 3vw, 2rem);
     height: 100%;
     display: flex;
     flex-direction: column;
+    gap: 0;
     font-family: 'Courier New', 'Lucida Console', monospace;
-    font-size: clamp(0.55rem, 1.4vw, 0.85rem);
+    font-size: clamp(0.6rem, 1.4vw, 0.85rem);
     color: var(--imperial-amber);
-    line-height: 1.6;
+    line-height: 1.5;
     overflow: hidden;
   }
 
-  .border-top, .separator, .border-bottom {
-    color: #665500;
-    white-space: nowrap;
-    overflow: hidden;
+  .panel {
+    border: 1px solid #665500;
+    padding: 0.5rem 0.8rem;
+    margin-bottom: -1px; /* collapse borders */
   }
 
-  .header-row {
-    display: flex;
-    white-space: nowrap;
-    overflow: hidden;
-  }
-
-  .header-row .header-text {
-    flex: 1;
+  .header-panel {
     text-align: center;
+    background: rgba(255, 143, 0, 0.03);
+  }
+
+  .header-text {
     color: var(--imperial-amber);
     text-shadow: 0 0 8px rgba(255, 143, 0, 0.4);
   }
 
-  .header-row .header-sub {
-    flex: 1;
-    text-align: center;
+  .header-sub {
     color: #886600;
     font-size: 0.9em;
   }
 
-  .border-char {
-    color: #665500;
-    flex-shrink: 0;
-  }
-
-  .log-area {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-  }
-
-  .log-row {
-    display: flex;
-    gap: 0.5rem;
-    animation: typeIn 0.05s ease;
+  .log-panel {
+    padding: 0.6rem 0.8rem;
   }
 
   .log-line {
     color: var(--imperial-amber);
     opacity: 0.7;
+    animation: typeIn 0.05s ease;
+  }
+
+  .log-line.empty {
+    height: 0.5em;
   }
 
   .log-line.ok {
@@ -313,14 +257,9 @@
     text-shadow: 0 0 5px rgba(255, 23, 68, 0.5);
   }
 
-  .input-section {
-    flex-shrink: 0;
-  }
-
-  .prompt-row {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
+  .input-panel {
+    padding: 0.6rem 0.8rem;
+    background: rgba(255, 143, 0, 0.02);
   }
 
   .prompt-label {
