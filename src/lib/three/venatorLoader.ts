@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { LDrawLoader } from 'three/examples/jsm/loaders/LDrawLoader.js';
+import { LDrawConditionalLineMaterial } from 'three/examples/jsm/materials/LDrawConditionalLineMaterial.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { contributors } from '$lib/data/config';
 import { modelProgress, modelLoaded } from '$lib/stores/gameState';
@@ -18,6 +19,7 @@ export async function loadVenator(): Promise<BrickGroup[]> {
 
   loadingPromise = new Promise<BrickGroup[]>((resolve, reject) => {
     const loader = new LDrawLoader();
+    loader.setConditionalLineMaterial(LDrawConditionalLineMaterial);
     loader.setPartsLibraryPath('/models/ldraw/');
 
     loader.load(
