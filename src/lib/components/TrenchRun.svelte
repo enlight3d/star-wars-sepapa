@@ -15,6 +15,7 @@
   let destroyGame: (() => void) | null = null;
   let destroyKeyboard: (() => void) | null = null;
   let destroyTouch: (() => void) | null = null;
+  let togglePause: (() => void) | null = null;
   let isMobile = $state(false);
 
   onMount(() => {
@@ -47,9 +48,11 @@
       });
       const game = createTrenchRun(canvas, merged as typeof kbControls, onComplete);
       destroyGame = game.destroy;
+      togglePause = game.togglePause;
     } else {
       const game = createTrenchRun(canvas, kbControls, onComplete);
       destroyGame = game.destroy;
+      togglePause = game.togglePause;
     }
   });
 
@@ -87,9 +90,14 @@
       </div>
     </div>
 
-    <button bind:this={fireBtn} class="touch-btn fire" aria-label="Tirer">
-      FEU
-    </button>
+    <div class="right-controls">
+      <button bind:this={fireBtn} class="touch-btn fire" aria-label="Tirer">
+        FEU
+      </button>
+      <button class="touch-btn pause-btn" aria-label="Pause" onclick={() => togglePause?.()}>
+        ⏸
+      </button>
+    </div>
   </div>
 </div>
 
@@ -221,5 +229,29 @@
 
   .touch-btn.fire:active {
     background: rgba(255, 68, 68, 0.35);
+  }
+
+  .right-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .pause-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-color: rgba(79, 195, 247, 0.6);
+    color: #4fc3f7;
+    background: rgba(79, 195, 247, 0.1);
+  }
+
+  .pause-btn:active {
+    background: rgba(79, 195, 247, 0.3);
   }
 </style>

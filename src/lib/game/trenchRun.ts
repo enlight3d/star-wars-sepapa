@@ -1130,6 +1130,12 @@ export function createTrenchRun(
 
   return {
     state,
+    togglePause: () => {
+      if (!state.gameOver && !state.completed) {
+        state.paused = !state.paused;
+        if (!state.paused) lastTime = 0;
+      }
+    },
     destroy: () => {
       state.running = false;
       cancelAnimationFrame(animId);

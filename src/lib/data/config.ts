@@ -3,7 +3,7 @@ export const contributors = [
   'Fabienne', 'Antoine', 'Leo', 'Jordy', 'Juliette'
 ];
 
-export const password = 'TBD'; // Will be provided
+export const password = 'palpatine';
 
 export const crawlText = `Épisode XXXI
 
