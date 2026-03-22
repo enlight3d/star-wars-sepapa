@@ -4,24 +4,27 @@ export interface Controls {
   left: boolean;
   right: boolean;
   fire: boolean;
+  // Analog intensity 0-1 (keyboard always 1, joystick proportional)
+  ix: number;
+  iy: number;
 }
 
 export function createKeyboardControls(): { controls: Controls; destroy: () => void } {
-  const controls: Controls = { up: false, down: false, left: false, right: false, fire: false };
+  const controls: Controls = { up: false, down: false, left: false, right: false, fire: false, ix: 0, iy: 0 };
 
   function onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { controls.up = true; e.preventDefault(); }
-    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { controls.down = true; e.preventDefault(); }
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { controls.left = true; e.preventDefault(); }
-    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { controls.right = true; e.preventDefault(); }
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { controls.up = true; controls.iy = -1; e.preventDefault(); }
+    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { controls.down = true; controls.iy = 1; e.preventDefault(); }
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { controls.left = true; controls.ix = -1; e.preventDefault(); }
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { controls.right = true; controls.ix = 1; e.preventDefault(); }
     if (e.key === ' ') { controls.fire = true; e.preventDefault(); }
   }
 
   function onKeyUp(e: KeyboardEvent) {
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') controls.up = false;
-    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') controls.down = false;
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') controls.left = false;
-    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') controls.right = false;
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { controls.up = false; if (!controls.down) controls.iy = 0; }
+    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { controls.down = false; if (!controls.up) controls.iy = 0; }
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { controls.left = false; if (!controls.right) controls.ix = 0; }
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { controls.right = false; if (!controls.left) controls.ix = 0; }
     if (e.key === ' ') controls.fire = false;
   }
 
@@ -41,16 +44,14 @@ export function createJoystickControls(
   joystickContainer: HTMLElement,
   fireBtn: HTMLElement
 ): { controls: Controls; destroy: () => void } {
-  const controls: Controls = { up: false, down: false, left: false, right: false, fire: false };
+  const controls: Controls = { up: false, down: false, left: false, right: false, fire: false, ix: 0, iy: 0 };
 
-  // --- Joystick setup ---
   const containerRect = () => joystickContainer.getBoundingClientRect();
-  const radius = 60; // outer ring radius
-  const deadzone = radius * 0.2;
+  const radius = 60;
+  const deadzone = radius * 0.15;
 
-  // Create visual elements
+  // Visual elements
   const base = document.createElement('div');
-  base.className = 'joystick-base';
   base.style.cssText = `
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
     width: ${radius * 2}px; height: ${radius * 2}px; border-radius: 50%;
@@ -59,12 +60,11 @@ export function createJoystickControls(
   `;
 
   const thumb = document.createElement('div');
-  thumb.className = 'joystick-thumb';
   thumb.style.cssText = `
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
     width: 44px; height: 44px; border-radius: 50%;
     background: rgba(255, 215, 0, 0.3); border: 2px solid rgba(255, 215, 0, 0.8);
-    pointer-events: none; transition: none;
+    pointer-events: none;
   `;
 
   joystickContainer.style.position = 'relative';
@@ -77,10 +77,8 @@ export function createJoystickControls(
   function resetThumb() {
     thumb.style.left = '50%';
     thumb.style.top = '50%';
-    controls.up = false;
-    controls.down = false;
-    controls.left = false;
-    controls.right = false;
+    controls.up = controls.down = controls.left = controls.right = false;
+    controls.ix = controls.iy = 0;
   }
 
   function updateJoystick(clientX: number, clientY: number) {
@@ -91,7 +89,6 @@ export function createJoystickControls(
     let dx = clientX - centerX;
     let dy = clientY - centerY;
 
-    // Clamp to radius
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist > radius) {
       dx = (dx / dist) * radius;
@@ -102,34 +99,46 @@ export function createJoystickControls(
     thumb.style.left = `calc(50% + ${dx}px)`;
     thumb.style.top = `calc(50% + ${dy}px)`;
 
-    // Map to controls with deadzone
+    // Boolean direction (with deadzone)
     controls.left = dx < -deadzone;
     controls.right = dx > deadzone;
     controls.up = dy < -deadzone;
     controls.down = dy > deadzone;
+
+    // Analog intensity: 0 at deadzone edge, 1 at full radius
+    const effectiveDist = Math.max(0, dist - deadzone);
+    const effectiveMax = radius - deadzone;
+    const intensity = Math.min(1, effectiveDist / effectiveMax);
+
+    // Directional intensity
+    if (dist > deadzone) {
+      controls.ix = (dx / dist) * intensity;
+      controls.iy = (dy / dist) * intensity;
+    } else {
+      controls.ix = 0;
+      controls.iy = 0;
+    }
   }
 
-  // --- Joystick touch handlers ---
-  function onJoystickTouchStart(e: TouchEvent) {
+  function onTouchStart(e: TouchEvent) {
     e.preventDefault();
-    if (activeJoystickTouchId !== null) return; // already tracking
+    if (activeJoystickTouchId !== null) return;
     const touch = e.changedTouches[0];
     activeJoystickTouchId = touch.identifier;
     updateJoystick(touch.clientX, touch.clientY);
   }
 
-  function onJoystickTouchMove(e: TouchEvent) {
+  function onTouchMove(e: TouchEvent) {
     e.preventDefault();
     for (let i = 0; i < e.changedTouches.length; i++) {
-      const touch = e.changedTouches[i];
-      if (touch.identifier === activeJoystickTouchId) {
-        updateJoystick(touch.clientX, touch.clientY);
+      if (e.changedTouches[i].identifier === activeJoystickTouchId) {
+        updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
         break;
       }
     }
   }
 
-  function onJoystickTouchEnd(e: TouchEvent) {
+  function onTouchEnd(e: TouchEvent) {
     for (let i = 0; i < e.changedTouches.length; i++) {
       if (e.changedTouches[i].identifier === activeJoystickTouchId) {
         activeJoystickTouchId = null;
@@ -139,35 +148,19 @@ export function createJoystickControls(
     }
   }
 
-  // Mouse fallback for desktop testing
   let mouseDown = false;
+  function onMouseDown(e: MouseEvent) { e.preventDefault(); mouseDown = true; updateJoystick(e.clientX, e.clientY); }
+  function onMouseMove(e: MouseEvent) { if (mouseDown) updateJoystick(e.clientX, e.clientY); }
+  function onMouseUp() { if (mouseDown) { mouseDown = false; resetThumb(); } }
 
-  function onMouseDown(e: MouseEvent) {
-    e.preventDefault();
-    mouseDown = true;
-    updateJoystick(e.clientX, e.clientY);
-  }
-
-  function onMouseMove(e: MouseEvent) {
-    if (!mouseDown) return;
-    updateJoystick(e.clientX, e.clientY);
-  }
-
-  function onMouseUp() {
-    if (!mouseDown) return;
-    mouseDown = false;
-    resetThumb();
-  }
-
-  joystickContainer.addEventListener('touchstart', onJoystickTouchStart, { passive: false });
-  joystickContainer.addEventListener('touchmove', onJoystickTouchMove, { passive: false });
-  joystickContainer.addEventListener('touchend', onJoystickTouchEnd, { passive: false });
-  joystickContainer.addEventListener('touchcancel', onJoystickTouchEnd, { passive: false });
+  joystickContainer.addEventListener('touchstart', onTouchStart, { passive: false });
+  joystickContainer.addEventListener('touchmove', onTouchMove, { passive: false });
+  joystickContainer.addEventListener('touchend', onTouchEnd, { passive: false });
+  joystickContainer.addEventListener('touchcancel', onTouchEnd, { passive: false });
   joystickContainer.addEventListener('mousedown', onMouseDown);
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mouseup', onMouseUp);
 
-  // --- Fire button ---
   const fireStart = (e: Event) => { e.preventDefault(); controls.fire = true; };
   const fireEnd = (e: Event) => { e.preventDefault(); controls.fire = false; };
   fireBtn.addEventListener('touchstart', fireStart, { passive: false });
@@ -180,10 +173,10 @@ export function createJoystickControls(
   return {
     controls,
     destroy: () => {
-      joystickContainer.removeEventListener('touchstart', onJoystickTouchStart);
-      joystickContainer.removeEventListener('touchmove', onJoystickTouchMove);
-      joystickContainer.removeEventListener('touchend', onJoystickTouchEnd);
-      joystickContainer.removeEventListener('touchcancel', onJoystickTouchEnd);
+      joystickContainer.removeEventListener('touchstart', onTouchStart);
+      joystickContainer.removeEventListener('touchmove', onTouchMove);
+      joystickContainer.removeEventListener('touchend', onTouchEnd);
+      joystickContainer.removeEventListener('touchcancel', onTouchEnd);
       joystickContainer.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);

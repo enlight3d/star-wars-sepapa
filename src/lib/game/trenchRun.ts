@@ -493,12 +493,20 @@ export function createTrenchRun(
     comboTimer = Math.max(0, comboTimer - effectiveDt);
     if (comboTimer <= 0) state.combo = 0;
 
-    // Player movement
+    // Player movement — use analog intensity if available (joystick), else full speed (keyboard)
     const moveSpeed = PLAYER_SPEED * 60 * effectiveDt * scale;
-    if (controls.left) player.x -= moveSpeed;
-    if (controls.right) player.x += moveSpeed;
-    if (controls.up) player.y -= moveSpeed;
-    if (controls.down) player.y += moveSpeed;
+    if (controls.ix !== undefined && controls.ix !== 0) {
+      player.x += moveSpeed * controls.ix;
+    } else {
+      if (controls.left) player.x -= moveSpeed;
+      if (controls.right) player.x += moveSpeed;
+    }
+    if (controls.iy !== undefined && controls.iy !== 0) {
+      player.y += moveSpeed * controls.iy;
+    } else {
+      if (controls.up) player.y -= moveSpeed;
+      if (controls.down) player.y += moveSpeed;
+    }
 
     // Clamp to trench
     const padX = playerVisualW * 0.45;
