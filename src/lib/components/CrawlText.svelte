@@ -8,26 +8,8 @@
 
   onMount(() => {
     if (crawlEl) {
-      // Calculate how long the text actually needs to scroll based on content height
-      // The animation goes from translateY(100vh) to translateY(-200%)
-      // Text is done when it has traveled: viewport height + text height
-      // At a constant speed over DURATION seconds
-      const textHeight = crawlEl.scrollHeight;
-      const viewportHeight = window.innerHeight;
-      const totalTravel = viewportHeight + textHeight;
-      const animDuration = 45; // must match CSS animation duration
-      // The CSS moves from 100vh to -200% of element height
-      // Total CSS distance = viewportHeight + 2 * textHeight
-      const totalCssTravel = viewportHeight + 2 * textHeight;
-      // Time when text bottom reaches viewport top:
-      const doneTime = (totalTravel / totalCssTravel) * animDuration;
-
-      console.log(`Crawl: textH=${textHeight}, doneTime=${doneTime.toFixed(1)}s`);
-
-      const timer = setTimeout(() => {
-        onComplete();
-      }, doneTime * 1000);
-
+      // Transition after 35 seconds — text should be fully scrolled by then
+      const timer = setTimeout(onComplete, 35000);
       return () => clearTimeout(timer);
     }
   });
