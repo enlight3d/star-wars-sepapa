@@ -224,14 +224,22 @@ import { base } from '$app/paths';
 
 let starWarsTheme: Howl | null = null;
 
-export function playStarWarsTheme() {
+// Call during a user gesture (click-to-start) to preload & unlock audio on mobile
+export function preloadStarWarsTheme() {
   if (!starWarsTheme) {
     starWarsTheme = new Howl({
       src: [`${base}/audio/star-wars-theme.mp3`],
       volume: 0.7,
+      preload: true,
     });
   }
-  starWarsTheme.play();
+}
+
+export function playStarWarsTheme() {
+  if (!starWarsTheme) {
+    preloadStarWarsTheme();
+  }
+  starWarsTheme!.play();
 }
 
 export function fadeOutStarWarsTheme(duration = 2000) {

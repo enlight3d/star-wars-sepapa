@@ -1,12 +1,20 @@
 <script lang="ts">
   import { audioEnabled } from '$lib/stores/gameState';
-  import { getAudioContext } from '$lib/audio/audioManager';
+  import { getAudioContext, preloadStarWarsTheme } from '$lib/audio/audioManager';
 
   let { onComplete }: { onComplete: () => void } = $props();
 
   function handleStart() {
+    // This runs during a user gesture — unlock audio + preload theme for mobile
     const ctx = getAudioContext();
     ctx.resume();
+    preloadStarWarsTheme();
+
+    // Prevent screen lock on mobile
+    try {
+      navigator.wakeLock?.request('screen').catch(() => {});
+    } catch {}
+
     audioEnabled.set(true);
     onComplete();
   }
