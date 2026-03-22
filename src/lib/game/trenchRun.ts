@@ -39,7 +39,7 @@ export interface GameState {
 }
 
 // ── Constants ───────────────────────────────────────────────────────
-const DURATION = 5; // DEBUG: change to 35 for production
+const DURATION = 35; // DEBUG: change to 35 for production
 const PLAYER_SPEED = 4.5;
 const SCROLL_SPEED = 130; // pixels per second
 const FIRE_COOLDOWN = 0.16;
