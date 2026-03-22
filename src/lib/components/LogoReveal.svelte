@@ -1,11 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { playStarWarsTheme } from '$lib/audio/audioManager';
 
   let { onComplete }: { onComplete: () => void } = $props();
 
   let phase = $state<'hidden' | 'big' | 'readable' | 'shrinking'>('hidden');
 
   onMount(() => {
+    // Play the Star Wars theme when the logo appears
+    playStarWarsTheme();
     // Phase 1: appear big
     setTimeout(() => phase = 'big', 100);
     // Phase 2: settle at readable size (hold for 3 seconds)

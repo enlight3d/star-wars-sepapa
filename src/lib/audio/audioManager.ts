@@ -168,6 +168,32 @@ export function playVictory() {
   });
 }
 
+// ── Star Wars theme (MP3 file) ──────────────────────────────────
+import { Howl } from 'howler';
+
+let starWarsTheme: Howl | null = null;
+
+export function playStarWarsTheme() {
+  if (!starWarsTheme) {
+    starWarsTheme = new Howl({
+      src: ['/audio/star-wars-theme.mp3'],
+      volume: 0.7,
+    });
+  }
+  starWarsTheme.play();
+}
+
+export function fadeOutStarWarsTheme(duration = 2000) {
+  if (starWarsTheme && starWarsTheme.playing()) {
+    starWarsTheme.fade(0.7, 0, duration);
+    setTimeout(() => starWarsTheme?.stop(), duration);
+  }
+}
+
+export function stopStarWarsTheme() {
+  starWarsTheme?.stop();
+}
+
 // ── Venator scene ────────────────────────────────────────────────
 export function playBrickPlace() {
   const ctx = getAudioContext();

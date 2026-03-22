@@ -4,7 +4,7 @@
   import { loadVenator, type VenatorModel } from '$lib/three/venatorLoader';
   import { createConfetti } from '$lib/three/particles';
   import { modelProgress } from '$lib/stores/gameState';
-  import { playBrickPlace, playBudgetAlert } from '$lib/audio/audioManager';
+  import { playBrickPlace, playBudgetAlert, fadeOutStarWarsTheme } from '$lib/audio/audioManager';
 
   let { onComplete }: { onComplete: () => void } = $props();
 
@@ -39,7 +39,8 @@
       return;
     }
 
-    // Step 2: NOW create the 3D scene and renderer
+    // Step 2: Fade out the Star Wars theme, create the 3D scene
+    fadeOutStarWarsTheme(3000);
     showLoading = false;
 
     const scene = new THREE.Scene();
