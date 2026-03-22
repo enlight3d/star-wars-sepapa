@@ -49,9 +49,9 @@
     camera.position.set(2000, 1000, 2000);
     camera.lookAt(0, 0, 0);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: !venator.isMobile });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(venator.isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
     // Lighting
@@ -78,17 +78,19 @@
     let animId: number;
     let lastTime = 0;
 
-    // Brick-by-brick animation state
+    // Animation state
     let nextBrickIdx = 0;
     let brickTimer = 0;
-    const BRICKS_PER_SECOND = 200;
+    // Adapt speed: ~20s total build time regardless of brick count
+    const totalBuildBricks = Math.ceil(venator.bricks.length * 0.92);
+    const BRICKS_PER_SECOND = Math.max(1, totalBuildBricks / 20);
     const halfPoint = Math.ceil(venator.bricks.length * 0.92);
     let paused = false;
     let currentContributorIdx = -1;
 
-    // Drop animation — bricks fall from above to their final position
-    const DROP_HEIGHT = 300; // LDraw units to drop from
-    const DROP_DURATION = 0.4; // seconds per brick drop
+    // Drop animation — only on desktop (mobile groups are too big to drop)
+    const DROP_HEIGHT = 300;
+    const DROP_DURATION = 0.4;
     const droppingBricks: { obj: THREE.Object3D; targetY: number; elapsed: number }[] = [];
 
     function animate(timestamp: number) {
@@ -127,7 +129,7 @@
               break;
             }
 
-            // Reveal next brick — start drop animation
+            // Reveal next brick with drop animation
             const brick = venator.bricks[nextBrickIdx];
             const targetY = brick.position.y;
             brick.position.y = targetY + DROP_HEIGHT;

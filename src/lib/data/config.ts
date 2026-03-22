@@ -1,6 +1,6 @@
 export const contributors = [
   'Thibaud', 'Marie', 'Rénald', 'Aurélien',
-  'Fabienne', 'Antoine', 'Leo', 'Jordy', 'Juliette'
+  'Fabienne', 'Antoine', 'Leo', 'Jordy', 'Juliette', 'Tarik'
 ];
 
 export const password = 'palpatine';
@@ -35,7 +35,7 @@ décidé de lui offrir un cadeau
 digne de son rang de Commandant...
 
 Un projet d'envergure colossale,
-fruit de la contribution de neuf
+fruit de la contribution de dix
 officiers de la flotte, est sur
 le point d'être révélé...
 

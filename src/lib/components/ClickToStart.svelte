@@ -4,15 +4,36 @@
 
   let { onComplete }: { onComplete: () => void } = $props();
 
-  function handleStart() {
+  async function handleStart() {
     // This runs during a user gesture — unlock audio + preload theme for mobile
     const ctx = getAudioContext();
     ctx.resume();
     preloadStarWarsTheme();
 
-    // Prevent screen lock on mobile
+    // Prevent screen lock on mobile — keep re-acquiring on visibility change
+    async function acquireWakeLock() {
+      try {
+        const lock = await navigator.wakeLock?.request('screen');
+        lock?.addEventListener('release', () => {
+          // Re-acquire when page becomes visible again
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') acquireWakeLock();
+          }, { once: true });
+        });
+      } catch {}
+    }
+    acquireWakeLock();
+
+    // Fallback: play a silent audio loop to keep the screen awake
     try {
-      navigator.wakeLock?.request('screen').catch(() => {});
+      const silentCtx = getAudioContext();
+      const osc = silentCtx.createOscillator();
+      const gain = silentCtx.createGain();
+      gain.gain.value = 0.001; // inaudible
+      osc.connect(gain);
+      gain.connect(silentCtx.destination);
+      osc.start();
+      // This keeps the audio context active, preventing screen sleep on iOS
     } catch {}
 
     audioEnabled.set(true);

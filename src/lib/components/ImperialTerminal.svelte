@@ -58,11 +58,19 @@
 
   function handleSubmit() {
     const input = inputValue.toLowerCase().trim();
-    // Cheat code: skip to cinematic (bypass mini-game)
+    // Cheat codes
     if (input === 'iddqd') {
+      // Skip to cinematic (bypass mini-game)
       status = 'granted';
       playTerminalGranted();
       setTimeout(() => currentStep.set(3), 800);
+      return;
+    }
+    if (input === 'idkfa') {
+      // Skip to Venator 3D model
+      status = 'granted';
+      playTerminalGranted();
+      setTimeout(() => currentStep.set(6), 800);
       return;
     }
     if (input === password.toLowerCase().trim()) {

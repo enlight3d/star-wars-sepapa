@@ -25,7 +25,7 @@
     text-align: center; padding: 2rem;
   ">
     <h1 style="font-size: 2rem; margin-bottom: 1rem;">Bon Anniversaire Alexis !</h1>
-    <p style="color: #4fc3f7; margin-bottom: 2rem;">De la part de Thibaud, Marie, Rénald, Aurélien, Fabienne, Antoine, Leo, Jordy et Juliette</p>
+    <p style="color: #4fc3f7; margin-bottom: 2rem;">De la part de Thibaud, Marie, Rénald, Aurélien, Fabienne, Antoine, Leo, Jordy, Juliette et Tarik</p>
   </div>
 {:else}
   {@render children()}
