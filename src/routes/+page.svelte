@@ -16,6 +16,9 @@
 
   let preloadPromise: Promise<any> | null = null;
   $effect(() => {
+    // Start preloading during the trench run (step 2) — the game loop
+    // runs on requestAnimationFrame so the main thread pause from LDraw
+    // parsing won't be noticeable during gameplay
     if ($currentStep >= 1 && !preloadPromise) {
       preloadPromise = loadVenator().catch(err => console.warn('Preload failed:', err));
     }
@@ -27,8 +30,8 @@
       currentStep.update(s => s + 1);
       setTimeout(() => {
         transitioning = false;
-      }, 100);
-    }, 500);
+      }, 50);
+    }, 250);
   }
 </script>
 
@@ -38,19 +41,19 @@
 
 <main>
   {#if $currentStep === 0}
-    <div in:fade={{ duration: 500 }}>
+    <div in:fade={{ duration: 300 }}>
       <ClickToStart onComplete={nextStep} />
     </div>
   {:else if $currentStep === 1}
-    <div in:fade={{ duration: 500 }}>
+    <div in:fade={{ duration: 200 }}>
       <ImperialTerminal onComplete={nextStep} />
     </div>
   {:else if $currentStep === 2}
-    <div in:fade={{ duration: 500 }}>
+    <div in:fade={{ duration: 200 }}>
       <TrenchRun onComplete={nextStep} />
     </div>
   {:else if $currentStep === 3}
-    <div in:fade={{ duration: 500 }}>
+    <div in:fade={{ duration: 300 }}>
       <FarAway onComplete={nextStep} />
     </div>
   {:else if $currentStep === 4}
@@ -88,7 +91,7 @@
     z-index: 100;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.25s ease;
   }
 
   .overlay.fade-out {
