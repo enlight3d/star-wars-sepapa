@@ -472,7 +472,7 @@ export function drawTrenchWall(
 
   // 3. Scrolling green indicator lights (movie-style)
   const lightSpacing = 80;
-  const lightOffY = ((scrollOffset % lightSpacing) + lightSpacing) % lightSpacing;
+  const lightOffY = ((-scrollOffset % lightSpacing) + lightSpacing) % lightSpacing;
   const lightX = isLeft ? x + w - 14 : x + 10;
 
   for (let ly = y - lightOffY; ly < y + h; ly += lightSpacing) {
@@ -541,7 +541,7 @@ export function drawTrenchFloor(
 
   // 4. Occasional green lights on the floor
   const lightSpacing = 120;
-  const lightOffY = ((scrollOffset % lightSpacing) + lightSpacing) % lightSpacing;
+  const lightOffY = ((-scrollOffset % lightSpacing) + lightSpacing) % lightSpacing;
   const lightX = cx;
 
   for (let ly = -lightOffY; ly < height; ly += lightSpacing) {
