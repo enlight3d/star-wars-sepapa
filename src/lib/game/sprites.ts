@@ -50,56 +50,82 @@ function drawSprite(
   }
 }
 
-// ── X-Wing (top-down, nose up, ~30 pixel-rows) ─────────────────────
-// Palette: L=light gray, D=dark gray, B=blue engine, R=red accent,
-// K=black outline, C=cockpit dark blue, c=cockpit light, W=white highlight
+// ── X-Wing (top-down, nose up, ~42 pixel-rows x 41 cols) ────────────
+// Palette: many shades for a detailed SNES look
 const XWING_PALETTE: Record<string, string> = {
   'K': '#1a1a2e', // black outline
   'L': '#b8b8c8', // light gray body
   'D': '#707888', // dark gray panels
   'G': '#585868', // darker gray
+  'M': '#9090a0', // mid gray
   'R': '#cc2222', // red stripe
-  'r': '#ff4444', // red tip bright
+  'r': '#ff4444', // red tip bright / laser cannon
+  'e': '#ff6666', // red glow
   'B': '#2266dd', // blue engine
-  'b': '#44aaff', // blue engine glow
+  'b': '#44aaff', // blue engine glow bright
+  'n': '#66ccff', // engine nozzle cyan
   'C': '#1a3355', // cockpit dark
   'c': '#3388bb', // cockpit highlight
+  'q': '#254470', // cockpit mid
   'W': '#e0e0f0', // white highlight
+  'H': '#d0d0e0', // highlight slightly dimmer
   'P': '#888898', // panel line
+  'p': '#686878', // panel line darker
+  'S': '#9898a8', // secondary gray
+  'T': '#484858', // darkest body gray
+  'F': '#a0a0b0', // fuselage lighter
+  'V': '#222238', // very dark accent
 };
 
-// 30 rows x 31 cols sprite
+// 47 rows x 47 cols — proper X formation with long wings, all rows padded to 47
 const XWING_ROWS = [
-  // Laser cannon tips (4 cannons at wing tips)
-  '...r...........r.r...........r...',
-  '...R...........K.K...........R...',
-  '...G...........L.L...........G...',
-  // Upper wings spread
-  '..KG..........KLWLK..........GK..',
-  '.KDG.........KLWWWLK.........GDK.',
-  'KDRGK........KLWPWLK........KGRDK',
-  'KDRG.........KDLPLDK.........GRDK',
-  '.KGK..........KDLDK..........KGK.',
-  '..K...........KDLDK...........K..',
-  // Body continues with cockpit
-  '..............KDCDK..............',
-  '..............KCcCK..............',
-  '..............KCcCK..............',
-  '..............KDCDK..............',
-  '..............KLPLK..............',
-  // Lower wings spread
-  '..K...........KDLDK...........K..',
-  '.KGK..........KDLDK..........KGK.',
-  'KDRG.........KDLPLDK.........GRDK',
-  'KDRGK........KLWPWLK........KGRDK',
-  '.KDG.........KLWWWLK.........GDK.',
-  '..KG..........KLWLK..........GK..',
-  // Engine section
-  '..............KDDDK..............',
-  '..............KGGDK..............',
-  '.............KBbBbBK.............',
-  '.............KBbBbBK.............',
-  '...r...........K.K...........r...',
+  '.....r.................r.................r.....', // 0  cannon tips
+  '.....R.................K.................R.....', // 1
+  '....KR................KWK................RK....', // 2  wings begin
+  '...KDRK..............KWWWK..............KRDK...', // 3
+  '..KDRGK.............KWFWFWK.............KGRDK..', // 4
+  '.KDRRGK............KWFHFHFWK............KGRRDK.', // 5
+  'KDRRRG............KWFHPLPHFWK............GRRRDG', // 6
+  'KDRRG............KMFHPLLLPHFMK............GRRDK', // 7
+  '.KDRG...........KMDHPLLLLLPHDMK...........GRDK.', // 8
+  '..KDG..........KMDHLPLLLLLPLHDMK..........GDK..', // 9
+  '...KG..........KGDHPLLLLLLLPHDGK..........GK...', // 10
+  '....K.........KGDHLPLLLPLLLPLHDGK.........K....', // 11
+  '..............KGDHLLLLPLLLLLHDGK...............', // 12 fuselage nose
+  '...............KTDHLLLLLLLLLHDTK...............', // 13
+  '...............KTDHLLLLLLLLLHDTK...............', // 14
+  '................KVTDHLLLLHHDTVK................', // 15
+  '................KVTDLLLLLLTVK..................', // 16
+  '................KVTDLPLLDTVK...................', // 17 cockpit
+  '.................KVTCqqqCTVK...................', // 18
+  '.................KVCqcccqCVK...................', // 19
+  '.................KVCcccccCVK...................', // 20
+  '.................KVCcccccCVK...................', // 21
+  '.................KVCqcccqCVK...................', // 22
+  '.................KVTCqqqCTVK...................', // 23
+  '................KVTDLPLLDTVK...................', // 24
+  '................KVTDLLLLLLTVK..................', // 25 mid fuselage
+  '................KVTDHLLLLHHDTVK................', // 26
+  '...............KTDHLLLLLLLLLHDTK...............', // 27
+  '...............KTDHLLLLLLLLLHDTK...............', // 28
+  '..............KGDHLLLLPLLLLLHDGK...............', // 29
+  '....K.........KGDHLPLLLPLLLPLHDGK.........K....', // 30 lower wings
+  '...KG..........KGDHPLLLLLLLPHDGK..........GK...', // 31
+  '..KDG..........KMDHLPLLLLLPLHDMK..........GDK..', // 32
+  '.KDRG...........KMDHPLLLLLPHDMK...........GRDK.', // 33
+  'KDRRG............KMFHPLLLPHFMK............GRRDK', // 34
+  'KDRRRG............KWFHPLPHFWK............GRRRDG', // 35
+  '.KDRRGK............KWFHFHFWK............KGRRDK.', // 36
+  '..KDRGK.............KWFWFWK.............KGRDK..', // 37
+  '...KDRK..............KWWWK..............KRDK...', // 38
+  '....KR................KWK................RK....', // 39
+  '.....R.................K.................R.....', // 40
+  '.....r.................K.................r.....', // 41
+  '...............KTGDDDDDDDDDDGTK................', // 42 engine section
+  '...............KTGppDDDDDDppGTK................', // 43
+  '..............KTBbBnBKKBnBbBTK.................', // 44
+  '..............KTBnBbBKKBbBnBTK.................', // 45
+  '...............KKBnBnKKnBnBKK..................', // 46
 ];
 
 export function drawXWing(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
@@ -108,40 +134,61 @@ export function drawXWing(ctx: CanvasRenderingContext2D, x: number, y: number, s
   ctx.restore();
 }
 
-// ── TIE Fighter (top-down, ~24 pixel-rows) ──────────────────────────
+// ── TIE Fighter (top-down, ~32 rows x 33 cols) ─────────────────────
 const TIE_PALETTE: Record<string, string> = {
   'K': '#0a0a1a', // black outline
-  'D': '#2a2a3e', // dark panel
-  'P': '#3a3a50', // panel grid line
+  'D': '#1e1e30', // dark panel fill
+  'P': '#2a2a40', // panel mid
+  'Q': '#323248', // panel grid line light
   'G': '#4a4a5e', // gray cockpit outer
   'L': '#6a6a7e', // lighter gray
   'C': '#555570', // cockpit body
-  'R': '#cc2222', // red viewport
-  'r': '#ff4444', // red viewport bright
+  'H': '#7a7a90', // cockpit highlight
+  'R': '#cc3322', // red viewport
+  'r': '#ff5544', // red viewport bright
+  'O': '#ff8844', // orange viewport glow
   'S': '#383850', // strut
+  's': '#444460', // strut highlight
   'W': '#8888a0', // highlight
+  'B': '#161628', // darkest panel
+  'g': '#353550', // grid line inside panel
 };
 
+// 32 rows x 33 cols — large hexagonal panels with grid pattern
 const TIE_ROWS = [
-  '.KKK.........KKK.',
-  'KDDDKK.....KKDDDK',
-  'KDPDK.......KDPDK',
-  'KDDDKK.....KKDDDK',
-  'KDPDKKK...KKKDPDK',
-  'KDDDKSSK.SSKDDDK',
-  'KDPDKSSGKSSKDPDK',
-  'KDDDKSSGKSSKDDDK',
-  'KDPDKSSRRSKKDPDK',
-  'KDDDKSSRRSKKDDDK',
-  'KDPDKSSGKSSKDPDK',
-  'KDDDKSSGKSSKDDDK',
-  'KDPDKSSK.SSKDPDK',
-  'KDDDKK.....KKDDDK',
-  'KDPDKKK...KKKDPDK',
-  'KDDDKK.....KKDDDK',
-  'KDPDK.......KDPDK',
-  'KDDDKK.....KKDDDK',
-  '.KKK.........KKK.',
+  // Top edges of hexagonal panels
+  '..KKKK...................KKKK..', // row 0
+  '.KBDDDK.................KDDDBK.', // row 1
+  'KBDgDgDKK.............KKDgDgDBK', // row 2
+  'KDgPgPgDKK...........KKDgPgPgDK', // row 3
+  'KBDgDgDgDKK.........KKDgDgDgDBK', // row 4
+  'KDgPgPgPgDKK.......KKDgPgPgPgDK', // row 5
+  'KBDgDgDgDgDKK.....KKDgDgDgDgDBK', // row 6
+  'KDgPgPgPgPgDKK...KKDgPgPgPgPgDK', // row 7
+  'KBDgDgDgDgDgDKK.KKDgDgDgDgDgDBK', // row 8
+  'KDgPgPgPgPgPgDKSKDgPgPgPgPgPgDK', // row 9
+  'KBDgDgDgDgDgDgKSKgDgDgDgDgDgDBK', // row 10
+  'KDgPgPgPgPgPgDKSKDgPgPgPgPgPgDK', // row 11
+  'KBDgDgDgDgDgDgKsKgDgDgDgDgDgDBK', // row 12
+  'KDgPgPgPgPgPgDKGKDgPgPgPgPgPgDK', // row 13
+  'KBDgDgDgDgDgDgKCKgDgDgDgDgDgDBK', // row 14
+  'KDgPgPgPgPgPgDKRKDgPgPgPgPgPgDK', // row 15  cockpit center with viewport
+  'KBDgDgDgDgDgDgKrKgDgDgDgDgDgDBK', // row 16
+  'KDgPgPgPgPgPgDKRKDgPgPgPgPgPgDK', // row 17
+  'KBDgDgDgDgDgDgKCKgDgDgDgDgDgDBK', // row 18
+  'KDgPgPgPgPgPgDKGKDgPgPgPgPgPgDK', // row 19
+  'KBDgDgDgDgDgDgKsKgDgDgDgDgDgDBK', // row 20
+  'KDgPgPgPgPgPgDKSKDgPgPgPgPgPgDK', // row 21
+  'KBDgDgDgDgDgDgKSKgDgDgDgDgDgDBK', // row 22
+  'KDgPgPgPgPgPgDKSKDgPgPgPgPgPgDK', // row 23
+  'KBDgDgDgDgDgDKK.KKDgDgDgDgDgDBK', // row 24
+  'KDgPgPgPgPgDKK...KKDgPgPgPgPgDK', // row 25
+  'KBDgDgDgDgDKK.....KKDgDgDgDgDBK', // row 26
+  'KDgPgPgPgDKK.......KKDgPgPgPgDK', // row 27
+  'KBDgDgDgDKK.........KKDgDgDgDBK', // row 28
+  'KDgPgPgDKK...........KKDgPgPgDK', // row 29
+  '.KBDDDK.................KDDDBK.', // row 30
+  '..KKKK...................KKKK..', // row 31
 ];
 
 export function drawTIE(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
@@ -150,41 +197,56 @@ export function drawTIE(ctx: CanvasRenderingContext2D, x: number, y: number, sca
   ctx.restore();
 }
 
-// ── Turret (wall-mounted) ───────────────────────────────────────────
+// ── Turret (wall-mounted, ~16 rows x 16 cols) ──────────────────────
 const TURRET_PALETTE: Record<string, string> = {
-  'K': '#1a1a2e',
-  'D': '#333348',
-  'G': '#555570',
-  'L': '#777790',
-  'R': '#cc2222',
-  'r': '#ff4444',
-  'B': '#444460',
+  'K': '#1a1a2e', // outline
+  'D': '#2a2a40', // dark base
+  'G': '#555570', // mid gray
+  'M': '#444458', // mount gray
+  'L': '#777790', // light gray barrel
+  'H': '#9090a8', // highlight
+  'R': '#cc2222', // red glow
+  'r': '#ff4444', // red tip bright
+  'g': '#22cc22', // green glow
+  'e': '#44ff44', // green tip bright
+  'B': '#333348', // base dark
+  'V': '#222236', // rivet / bolt
+  'S': '#666680', // barrel shine
+  'T': '#3a3a50', // turret body mid
 };
 
 const TURRET_ROWS_RIGHT = [
-  '....KKKKK.',
-  '...KDDDDK.',
-  '..KDGGLDK.',
-  '.KDGBBGDK.',
-  'KDGBBBGDKr',
-  'KDGBBBGDKr',
-  '.KDGBBGDK.',
-  '..KDGGLDK.',
-  '...KDDDDK.',
-  '....KKKKK.',
+  '....KKKKKKKKK.......',
+  '...KVDDDDDDDVK......',
+  '..KVDBBGGGBBDVK.....',
+  '.KVDBTTTTTTTBDVK....',
+  'KVDBTTGLLGTTTBDVK...',
+  'KVDBTGLHHLGTBDVKSSS.',
+  'KVDBTGLHHLGTBDVKSeSe',
+  'KVDBTGLHHLGTBDVKSeSe',
+  'KVDBTGLHHLGTBDVKSSS.',
+  'KVDBTTGLLGTTTBDVK...',
+  '.KVDBTTTTTTTBDVK....',
+  '..KVDBBGGGBBDVK.....',
+  '...KVDDDDDDDVK......',
+  '....KKKKKKKKK.......',
 ];
 
 const TURRET_ROWS_LEFT = [
-  '.KKKKK....',
-  '.KDDDDK...',
-  '.KDLGGDK..',
-  '.KDGBBGDK.',
-  'rKDGBBBGDK',
-  'rKDGBBBGDK',
-  '.KDGBBGDK.',
-  '.KDLGGDK..',
-  '.KDDDDK...',
-  '.KKKKK....',
+  '.......KKKKKKKKK....',
+  '......KVDDDDDDDVK...',
+  '.....KVDBBGGGBBDVK..',
+  '....KVDBTTTTTTTBDVK.',
+  '...KVDBTTGLLGTTTBDVK',
+  '.SSSKVDBTGLHHLGTBDVK',
+  'eSeSKVDBTGLHHLGTBDVK',
+  'eSeSKVDBTGLHHLGTBDVK',
+  '.SSSKVDBTGLHHLGTBDVK',
+  '...KVDBTTGLLGTTTBDVK',
+  '....KVDBTTTTTTTBDVK.',
+  '.....KVDBBGGGBBDVK..',
+  '......KVDDDDDDDVK...',
+  '.......KKKKKKKKK....',
 ];
 
 export function drawTurret(
@@ -200,39 +262,61 @@ export function drawTurret(
   ctx.restore();
 }
 
-// ── Lasers (pixel-block style) ──────────────────────────────────────
+// ── Lasers (pixel-block style with glow) ─────────────────────────────
 export function drawLaser(ctx: CanvasRenderingContext2D, x: number, y: number, isEnemy: boolean) {
   ctx.save();
   const ps = PS;
 
   if (isEnemy) {
-    // Red enemy bolt — 3px wide, 8px tall pixel blocks
-    ctx.fillStyle = '#ff6666';
+    // Red enemy bolt — glow aura
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#ff2222';
+    ctx.fillRect(x - ps * 3, y - ps * 5, ps * 6, ps * 10);
+    ctx.globalAlpha = 1;
+    // Outer darker red
+    ctx.fillStyle = '#aa1111';
+    ctx.fillRect(x - ps * 1.5, y - ps * 5, ps * 3, ps * 10);
+    // Main body
+    ctx.fillStyle = '#ff5555';
     ctx.fillRect(x - ps, y - ps * 4, ps * 2, ps * 8);
     // Bright core
-    ctx.fillStyle = '#ffcccc';
-    ctx.fillRect(x - ps * 0.5, y - ps * 3, ps, ps * 6);
-    // Tip glow
+    ctx.fillStyle = '#ffbbbb';
+    ctx.fillRect(x - ps * 0.5, y - ps * 3.5, ps, ps * 7);
+    // Tips
     ctx.fillStyle = '#ff2222';
-    ctx.fillRect(x - ps * 1.5, y - ps * 5, ps * 3, ps);
-    ctx.fillRect(x - ps * 1.5, y + ps * 4, ps * 3, ps);
+    ctx.fillRect(x - ps * 2, y - ps * 6, ps * 4, ps);
+    ctx.fillRect(x - ps * 2, y + ps * 5, ps * 4, ps);
+    ctx.fillStyle = '#ffcccc';
+    ctx.fillRect(x - ps * 0.5, y - ps * 6, ps, ps);
+    ctx.fillRect(x - ps * 0.5, y + ps * 5, ps, ps);
   } else {
-    // Green player bolt — longer
+    // Green player bolt — longer, with glow
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#22ff22';
+    ctx.fillRect(x - ps * 3, y - ps * 7, ps * 6, ps * 14);
+    ctx.globalAlpha = 1;
+    // Outer darker green
+    ctx.fillStyle = '#11aa11';
+    ctx.fillRect(x - ps * 1.5, y - ps * 6, ps * 3, ps * 12);
+    // Main body
     ctx.fillStyle = '#44ff44';
     ctx.fillRect(x - ps, y - ps * 5, ps * 2, ps * 10);
     // Bright core
     ctx.fillStyle = '#ccffcc';
-    ctx.fillRect(x - ps * 0.5, y - ps * 4, ps, ps * 8);
-    // Tip glow
+    ctx.fillRect(x - ps * 0.5, y - ps * 4.5, ps, ps * 9);
+    // Tips
     ctx.fillStyle = '#22ff22';
-    ctx.fillRect(x - ps * 1.5, y - ps * 6, ps * 3, ps);
-    ctx.fillRect(x - ps * 1.5, y + ps * 5, ps * 3, ps);
+    ctx.fillRect(x - ps * 2, y - ps * 7, ps * 4, ps);
+    ctx.fillRect(x - ps * 2, y + ps * 6, ps * 4, ps);
+    ctx.fillStyle = '#eeffee';
+    ctx.fillRect(x - ps * 0.5, y - ps * 7, ps, ps);
+    ctx.fillRect(x - ps * 0.5, y + ps * 6, ps, ps);
   }
 
   ctx.restore();
 }
 
-// ── Trench Walls with SNES pixel art details ────────────────────────
+// ── Trench Walls — Death Star surface greebling ──────────────────────
 export function drawTrenchWall(
   ctx: CanvasRenderingContext2D,
   x: number, y: number, w: number, h: number,
@@ -241,122 +325,182 @@ export function drawTrenchWall(
   const ps = PS;
 
   // Base wall color — dark metallic
-  ctx.fillStyle = '#1c1c28';
+  ctx.fillStyle = '#1a1a26';
   ctx.fillRect(x, y, w, h);
 
-  // Panel grid (chunky pixel lines)
-  const panelSize = 28;
-  const offsetY = scrollOffset % panelSize;
+  // Dense greebling: many small rectangles at slightly different shades
+  const greebleShades = ['#16161f', '#1e1e2c', '#222234', '#262638', '#1c1c28', '#202030'];
+  const greebleH = 14;
+  const greebleOff = scrollOffset % greebleH;
 
-  // Horizontal panel lines
-  ctx.fillStyle = '#2a2a3a';
-  for (let py = y - offsetY; py < y + h; py += panelSize) {
+  // Seed-based pseudo-random for consistent greeble pattern
+  for (let gy = y - greebleOff - greebleH; gy < y + h + greebleH; gy += greebleH) {
+    for (let gx = x; gx < x + w; gx += 8) {
+      if (gy < y - 2 || gy > y + h) continue;
+      const hash = ((gx * 7 + gy * 13 + 37) & 0xff);
+      const shade = greebleShades[hash % greebleShades.length];
+      const gw = 4 + (hash % 5) * 2;
+      const gh = 4 + ((hash >> 3) % 4) * 2;
+      ctx.fillStyle = shade;
+      ctx.fillRect(
+        Math.round(gx),
+        Math.round(gy),
+        Math.min(gw, x + w - gx),
+        Math.min(gh, y + h - gy)
+      );
+    }
+  }
+
+  // Horizontal panel seam lines (conduits)
+  const panelH = 32;
+  const panelOff = scrollOffset % panelH;
+  ctx.fillStyle = '#0e0e18';
+  for (let py = y - panelOff; py < y + h; py += panelH) {
     if (py < y - ps) continue;
     ctx.fillRect(x, Math.round(py), w, ps);
   }
-
-  // Vertical panel lines
-  for (let px2 = x; px2 < x + w; px2 += panelSize) {
-    ctx.fillRect(Math.round(px2), y, ps, h);
+  // Highlight below each seam
+  ctx.fillStyle = '#2e2e42';
+  for (let py = y - panelOff + ps; py < y + h; py += panelH) {
+    if (py < y) continue;
+    ctx.fillRect(x, Math.round(py), w, 1);
   }
 
-  // Dithered shading on alternating panels (checkerboard pattern)
-  for (let py = y - offsetY; py < y + h; py += panelSize) {
-    for (let px2 = x; px2 < x + w; px2 += panelSize) {
-      const col = Math.floor((px2 - x) / panelSize);
-      const row = Math.floor((py - y + offsetY) / panelSize);
-      if ((col + row) % 2 === 0) {
-        // Dithered darker panel
-        ctx.fillStyle = '#141420';
-        for (let dy = 0; dy < panelSize; dy += ps * 2) {
-          for (let dx = 0; dx < panelSize; dx += ps * 2) {
-            const realX = px2 + dx + ((dy / (ps * 2)) % 2 === 0 ? 0 : ps);
-            const realY = py + dy;
-            if (realX >= x && realX < x + w && realY >= y && realY < y + h) {
-              ctx.fillRect(Math.round(realX), Math.round(realY), ps, ps);
-            }
-          }
-        }
-      }
-    }
+  // Vertical panel seam lines at regular intervals
+  const vertSpacing = 24;
+  ctx.fillStyle = '#0e0e18';
+  for (let vx = x; vx < x + w; vx += vertSpacing) {
+    ctx.fillRect(Math.round(vx), y, 1, h);
+  }
+  // Highlight next to each vertical seam
+  ctx.fillStyle = '#2a2a3c';
+  for (let vx = x + 1; vx < x + w; vx += vertSpacing) {
+    ctx.fillRect(Math.round(vx), y, 1, h);
   }
 
-  // Pipes (vertical, near inner edge) — chunky pixel blocks
+  // Horizontal pipe / conduit (chunky, near inner edge)
   if (w > 20) {
     const isLeft = x < w;
-    const pipeX = isLeft ? x + w - 8 : x + 4;
-    ctx.fillStyle = '#282840';
-    ctx.fillRect(pipeX, y, ps * 2, h);
-    ctx.fillStyle = '#3a3a50';
-    ctx.fillRect(pipeX + ps, y, ps, h);
+    const pipeX = isLeft ? x + w - 10 : x + 4;
+    // Dark pipe body
+    ctx.fillStyle = '#1c1c2e';
+    ctx.fillRect(pipeX, y, ps * 3, h);
+    // Pipe highlight (top edge)
+    ctx.fillStyle = '#3a3a52';
+    ctx.fillRect(pipeX, y, ps, h);
+    // Pipe shadow (bottom edge)
+    ctx.fillStyle = '#101020';
+    ctx.fillRect(pipeX + ps * 2, y, ps, h);
 
-    // Pipe joints
+    // Pipe joints / brackets
     ctx.fillStyle = '#3a3a55';
-    for (let py2 = y - (scrollOffset % 56); py2 < y + h; py2 += 56) {
+    for (let py2 = y - (scrollOffset % 48); py2 < y + h; py2 += 48) {
       if (py2 < y - 4) continue;
-      ctx.fillRect(pipeX - ps, Math.round(py2), ps * 4, ps * 2);
+      ctx.fillRect(pipeX - ps, Math.round(py2), ps * 5, ps * 2);
+      // Bolt on bracket
+      ctx.fillStyle = '#4a4a60';
+      ctx.fillRect(pipeX, Math.round(py2 + 1), ps, ps);
+      ctx.fillStyle = '#3a3a55';
+    }
+
+    // Second pipe (thinner)
+    if (w > 30) {
+      const pipe2X = isLeft ? x + w - 20 : x + 14;
+      ctx.fillStyle = '#1e1e30';
+      ctx.fillRect(pipe2X, y, ps * 2, h);
+      ctx.fillStyle = '#2e2e44';
+      ctx.fillRect(pipe2X, y, 1, h);
     }
   }
 
-  // Small amber/red lights
+  // Amber indicator lights
   if (w > 16) {
-    const lightSpacing = 84;
+    const lightSpacing = 64;
     const lightOff = scrollOffset % lightSpacing;
     const isLeft = x < w;
-    const lightX = isLeft ? x + w - 16 : x + 12;
+    const lightX = isLeft ? x + w - 18 : x + 14;
 
     for (let ly = y - lightOff; ly < y + h; ly += lightSpacing) {
       if (ly < y - ps || ly > y + h) continue;
       // Amber light pixel block
       ctx.fillStyle = '#ff8c00';
       ctx.fillRect(Math.round(lightX), Math.round(ly), ps * 2, ps * 2);
-      // Glow (dithered)
-      ctx.fillStyle = '#cc6600';
-      ctx.fillRect(Math.round(lightX - ps), Math.round(ly - ps), ps, ps);
-      ctx.fillRect(Math.round(lightX + ps * 2), Math.round(ly - ps), ps, ps);
-      ctx.fillRect(Math.round(lightX - ps), Math.round(ly + ps * 2), ps, ps);
-      ctx.fillRect(Math.round(lightX + ps * 2), Math.round(ly + ps * 2), ps, ps);
+      // Glow halo (dithered)
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = '#ff6600';
+      ctx.fillRect(Math.round(lightX - ps), Math.round(ly - ps), ps * 4, ps * 4);
+      ctx.globalAlpha = 1;
+      // Bright center
+      ctx.fillStyle = '#ffcc44';
+      ctx.fillRect(Math.round(lightX + 1), Math.round(ly + 1), ps, ps);
     }
 
-    // Red lights (offset)
-    for (let ly = y - ((scrollOffset + 42) % lightSpacing); ly < y + h; ly += lightSpacing) {
+    // Red lights (offset from amber)
+    for (let ly = y - ((scrollOffset + 32) % lightSpacing); ly < y + h; ly += lightSpacing) {
       if (ly < y - ps || ly > y + h) continue;
       ctx.fillStyle = '#cc2222';
-      ctx.fillRect(Math.round(lightX + 6), Math.round(ly), ps * 2, ps * 2);
+      ctx.fillRect(Math.round(lightX + 8), Math.round(ly), ps, ps * 2);
+      ctx.fillStyle = '#ff4444';
+      ctx.fillRect(Math.round(lightX + 8), Math.round(ly), ps, ps);
+    }
+
+    // Green status lights (sparse)
+    for (let ly = y - ((scrollOffset + 50) % (lightSpacing * 2)); ly < y + h; ly += lightSpacing * 2) {
+      if (ly < y - ps || ly > y + h) continue;
+      ctx.fillStyle = '#22aa44';
+      ctx.fillRect(Math.round(lightX - 6), Math.round(ly), ps, ps);
     }
   }
 
   // Vent grates
   if (w > 30) {
-    const ventSpacing = 112;
+    const ventSpacing = 96;
     const ventOff = scrollOffset % ventSpacing;
     const isLeft = x < w;
-    const ventX = isLeft ? x + 8 : x + w - 18;
+    const ventX = isLeft ? x + 6 : x + w - 20;
     for (let vy = y - ventOff + 30; vy < y + h; vy += ventSpacing) {
-      if (vy < y || vy + 12 > y + h) continue;
-      ctx.fillStyle = '#0a0a14';
-      ctx.fillRect(ventX, Math.round(vy), ps * 5, ps * 5);
-      // Slats
-      ctx.fillStyle = '#222238';
-      for (let sl = 0; sl < 5; sl += 2) {
-        ctx.fillRect(ventX, Math.round(vy + sl * ps), ps * 5, ps);
+      if (vy < y || vy + 14 > y + h) continue;
+      // Vent recess
+      ctx.fillStyle = '#08080e';
+      ctx.fillRect(ventX, Math.round(vy), ps * 6, ps * 6);
+      // Horizontal slats
+      ctx.fillStyle = '#1e1e30';
+      for (let sl = 0; sl < 6; sl += 2) {
+        ctx.fillRect(ventX, Math.round(vy + sl * ps), ps * 6, ps);
       }
+      // Border
+      ctx.fillStyle = '#2a2a3e';
+      ctx.fillRect(ventX, Math.round(vy), ps * 6, 1);
+      ctx.fillRect(ventX, Math.round(vy + ps * 6 - 1), ps * 6, 1);
     }
   }
 
-  // Inner edge highlight
+  // Inner edge highlight (where trench floor meets wall)
   if (x <= 1) {
     // Left wall — bright edge on right
-    ctx.fillStyle = '#3a3a50';
+    ctx.fillStyle = '#3e3e56';
     ctx.fillRect(x + w - ps, y, ps, h);
+    ctx.fillStyle = '#2a2a40';
+    ctx.fillRect(x + w - ps * 2, y, ps, h);
   } else {
     // Right wall — bright edge on left
-    ctx.fillStyle = '#3a3a50';
+    ctx.fillStyle = '#3e3e56';
     ctx.fillRect(x, y, ps, h);
+    ctx.fillStyle = '#2a2a40';
+    ctx.fillRect(x + ps, y, ps, h);
+  }
+
+  // Outer edge shadow
+  if (x <= 1) {
+    ctx.fillStyle = '#0a0a12';
+    ctx.fillRect(x, y, ps, h);
+  } else {
+    ctx.fillStyle = '#0a0a12';
+    ctx.fillRect(x + w - ps, y, ps, h);
   }
 }
 
-// ── Trench Floor with glowing grid ──────────────────────────────────
+// ── Trench Floor with glowing grid and detail panels ─────────────────
 export function drawTrenchFloor(
   ctx: CanvasRenderingContext2D,
   left: number, right: number, height: number,
@@ -366,46 +510,92 @@ export function drawTrenchFloor(
   const ps = PS;
 
   // Dark floor base
-  ctx.fillStyle = '#08080e';
+  ctx.fillStyle = '#060610';
   ctx.fillRect(left, 0, w, height);
 
-  // Grid lines — pixel blocks
-  const gridSize = 36;
+  // Surface detail panels (subtle shade variation)
+  const detailH = 24;
+  const detailW = 20;
+  const detailOff = scrollOffset % detailH;
+  const panelShades = ['#08081a', '#0a0a16', '#0c0c1e', '#070714'];
+  for (let dy = -detailOff; dy < height; dy += detailH) {
+    for (let dx = left; dx < right; dx += detailW) {
+      const hash = ((dx * 11 + dy * 7 + 53) & 0xff);
+      ctx.fillStyle = panelShades[hash % panelShades.length];
+      ctx.fillRect(Math.round(dx), Math.round(dy), detailW, detailH);
+    }
+  }
+
+  // Grid lines — glowing cyan/blue
+  const gridSize = 32;
   const gridOffsetY = scrollOffset % gridSize;
 
-  // Horizontal grid — dim blue
-  ctx.fillStyle = '#141830';
+  // Horizontal grid — dim cyan
+  ctx.fillStyle = '#0c1830';
   for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
     ctx.fillRect(left, Math.round(gy), w, ps);
   }
+  // Brighter blue glow around horizontal lines
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#2244aa';
+  for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
+    ctx.fillRect(left, Math.round(gy - 1), w, ps + 2);
+  }
+  ctx.globalAlpha = 1;
 
   // Vertical grid
+  ctx.fillStyle = '#0c1830';
   for (let gx = left; gx <= right; gx += gridSize) {
     ctx.fillRect(Math.round(gx), 0, ps, height);
+  }
+  // Glow
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#2244aa';
+  for (let gx = left; gx <= right; gx += gridSize) {
+    ctx.fillRect(Math.round(gx - 1), 0, ps + 2, height);
+  }
+  ctx.globalAlpha = 1;
+
+  // Grid intersections — brighter dots
+  ctx.fillStyle = '#1a3060';
+  for (let gy = -gridOffsetY; gy < height; gy += gridSize) {
+    for (let gx = left; gx <= right; gx += gridSize) {
+      ctx.fillRect(Math.round(gx), Math.round(gy), ps, ps);
+    }
   }
 
   // Center groove (trench channel)
   const cx = Math.round((left + right) / 2);
-  const grooveW = Math.round(w * 0.08);
-  ctx.fillStyle = '#0c0c18';
+  const grooveW = Math.round(w * 0.1);
+  ctx.fillStyle = '#040410';
   ctx.fillRect(cx - grooveW / 2, 0, grooveW, height);
-  // Groove edge highlights
-  ctx.fillStyle = '#1a1a35';
+  // Groove edge highlights — cyan glow
+  ctx.fillStyle = '#1a2a50';
   ctx.fillRect(cx - grooveW / 2, 0, ps, height);
   ctx.fillRect(cx + grooveW / 2 - ps, 0, ps, height);
+  // Subtle inner groove detail
+  ctx.fillStyle = '#0a1228';
+  ctx.fillRect(cx - ps, 0, ps * 2, height);
 
-  // Surface detail blocks
-  ctx.fillStyle = '#0e0e1a';
-  const detailSpacing = 72;
-  const detailOff = scrollOffset % detailSpacing;
-  for (let dy = -detailOff; dy < height; dy += detailSpacing) {
-    if (dy < -10) continue;
-    ctx.fillRect(left + 12, Math.round(dy + 8), ps * 6, ps * 3);
-    ctx.fillRect(right - 12 - ps * 6, Math.round(dy + 8), ps * 6, ps * 3);
+  // Surface detail blocks (equipment, hatches)
+  const blockSpacing = 64;
+  const blockOff = scrollOffset % blockSpacing;
+  for (let dy = -blockOff; dy < height; dy += blockSpacing) {
+    if (dy < -12) continue;
+    // Left side equipment block
+    ctx.fillStyle = '#0e1020';
+    ctx.fillRect(left + 10, Math.round(dy + 6), ps * 5, ps * 3);
+    ctx.fillStyle = '#141830';
+    ctx.fillRect(left + 10, Math.round(dy + 6), ps * 5, 1);
+    // Right side
+    ctx.fillStyle = '#0e1020';
+    ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, ps * 3);
+    ctx.fillStyle = '#141830';
+    ctx.fillRect(right - 10 - ps * 5, Math.round(dy + 6), ps * 5, 1);
   }
 }
 
-// ── Explosions — SNES style with pixel debris ───────────────────────
+// ── Explosions — SNES style spectacular ──────────────────────────────
 export function drawExplosion(
   ctx: CanvasRenderingContext2D,
   x: number, y: number,
@@ -414,39 +604,79 @@ export function drawExplosion(
 ) {
   const progress = frame / maxFrames;
   const ps = PS;
-  const sizeBase = big ? 16 : 10;
-  const particleCount = big ? 16 : 10;
+  const sizeBase = big ? 28 : 14;
+  const particleCount = big ? 24 : 14;
 
   ctx.save();
 
-  // Stage 1: White flash (0-15%)
-  if (progress < 0.15) {
-    const flashSize = Math.round(sizeBase * (1 - progress / 0.15));
+  // Stage 1: White flash (0-12%)
+  if (progress < 0.12) {
+    const flashIntensity = 1 - progress / 0.12;
+    const flashSize = Math.round(sizeBase * 0.8 * flashIntensity);
     ctx.fillStyle = '#ffffff';
+    ctx.globalAlpha = flashIntensity;
     for (let dy = -flashSize; dy <= flashSize; dy += ps) {
       for (let dx = -flashSize; dx <= flashSize; dx += ps) {
-        if (Math.abs(dx) + Math.abs(dy) < flashSize * 1.5) {
+        if (Math.abs(dx) + Math.abs(dy) < flashSize * 1.6) {
           ctx.fillRect(Math.round(x + dx), Math.round(y + dy), ps, ps);
         }
       }
     }
+    ctx.globalAlpha = 1;
   }
 
-  // Stage 2: Orange/yellow fireball (5-60%)
-  if (progress > 0.05 && progress < 0.6) {
-    const fbProgress = (progress - 0.05) / 0.55;
-    const fbSize = Math.round(sizeBase * 0.8 * fbProgress);
-    const alpha = 1 - fbProgress;
+  // Stage 2: Yellow core (5-40%)
+  if (progress > 0.05 && progress < 0.4) {
+    const coreProgress = (progress - 0.05) / 0.35;
+    const coreSize = Math.round(sizeBase * 0.5 * (0.3 + coreProgress * 0.7));
+    const alpha = (1 - coreProgress) * 0.95;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#ffee44';
+    for (let dy = -coreSize; dy <= coreSize; dy += ps) {
+      for (let dx = -coreSize; dx <= coreSize; dx += ps) {
+        if (Math.abs(dx) + Math.abs(dy) < coreSize * 1.4) {
+          ctx.fillRect(Math.round(x + dx), Math.round(y + dy), ps, ps);
+        }
+      }
+    }
+    // White hot center
+    ctx.fillStyle = '#ffffff';
+    const innerSize = Math.round(coreSize * 0.3);
+    for (let dy = -innerSize; dy <= innerSize; dy += ps) {
+      for (let dx = -innerSize; dx <= innerSize; dx += ps) {
+        if (Math.abs(dx) + Math.abs(dy) < innerSize * 1.2) {
+          ctx.fillRect(Math.round(x + dx), Math.round(y + dy), ps, ps);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Stage 3: Orange fireball (8-55%)
+  if (progress > 0.08 && progress < 0.55) {
+    const fbProgress = (progress - 0.08) / 0.47;
+    const fbSize = Math.round(sizeBase * 0.9 * fbProgress);
+    const alpha = (1 - fbProgress) * 0.85;
     ctx.globalAlpha = alpha;
 
-    // Outer orange pixels
-    ctx.fillStyle = '#ff6600';
+    // Outer dark red
+    ctx.fillStyle = '#aa2200';
     for (let dy = -fbSize; dy <= fbSize; dy += ps) {
       for (let dx = -fbSize; dx <= fbSize; dx += ps) {
         if (Math.abs(dx) + Math.abs(dy) < fbSize * 1.4) {
-          // Dithered edge
           const dist = Math.abs(dx) + Math.abs(dy);
-          if (dist > fbSize * 0.8 && (dx + dy) % (ps * 2) === 0) continue;
+          if (dist > fbSize * 0.9 && (dx + dy) % (ps * 2) === 0) continue;
+          ctx.fillRect(Math.round(x + dx), Math.round(y + dy), ps, ps);
+        }
+      }
+    }
+
+    // Mid orange
+    ctx.fillStyle = '#ff6600';
+    const midSize = Math.round(fbSize * 0.7);
+    for (let dy = -midSize; dy <= midSize; dy += ps) {
+      for (let dx = -midSize; dx <= midSize; dx += ps) {
+        if (Math.abs(dx) + Math.abs(dy) < midSize * 1.3) {
           ctx.fillRect(Math.round(x + dx), Math.round(y + dy), ps, ps);
         }
       }
@@ -454,7 +684,7 @@ export function drawExplosion(
 
     // Inner yellow
     ctx.fillStyle = '#ffcc00';
-    const innerSize = Math.round(fbSize * 0.5);
+    const innerSize = Math.round(fbSize * 0.35);
     for (let dy = -innerSize; dy <= innerSize; dy += ps) {
       for (let dx = -innerSize; dx <= innerSize; dx += ps) {
         if (Math.abs(dx) + Math.abs(dy) < innerSize * 1.4) {
@@ -465,38 +695,79 @@ export function drawExplosion(
     ctx.globalAlpha = 1;
   }
 
-  // Stage 3: Debris particles (10-85%)
+  // Stage 4: Debris particles flying outward (10-85%)
   if (progress > 0.1 && progress < 0.85) {
     const debrisProgress = (progress - 0.1) / 0.75;
     ctx.globalAlpha = (1 - debrisProgress) * 0.9;
 
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount + (i * 1.37);
-      const speed = 0.4 + ((i * 7 + 3) % 5) / 5 * 0.6;
-      const dist = sizeBase * 2 * debrisProgress * speed;
+      const speed = 0.3 + ((i * 7 + 3) % 5) / 5 * 0.7;
+      const dist = sizeBase * 2.5 * debrisProgress * speed;
       const ppx = x + Math.cos(angle) * dist;
       const ppy = y + Math.sin(angle) * dist;
       const size = Math.round((1 - debrisProgress) * ps * (1 + (i % 3)));
 
-      ctx.fillStyle = debrisProgress < 0.3 ? '#ffcc00' :
-                      debrisProgress < 0.6 ? '#ff8800' : '#cc4400';
+      // Color gradient based on progress: white -> yellow -> orange -> red -> dark red
+      if (debrisProgress < 0.15) {
+        ctx.fillStyle = '#ffffff';
+      } else if (debrisProgress < 0.3) {
+        ctx.fillStyle = '#ffee44';
+      } else if (debrisProgress < 0.5) {
+        ctx.fillStyle = '#ff8800';
+      } else if (debrisProgress < 0.7) {
+        ctx.fillStyle = '#cc4400';
+      } else {
+        ctx.fillStyle = '#882200';
+      }
       ctx.fillRect(Math.round(ppx), Math.round(ppy), size, size);
+    }
+
+    // Secondary smaller debris (for big explosions)
+    if (big) {
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI * 2 * i) / 12 + 0.5;
+        const speed = 0.6 + ((i * 3 + 1) % 4) / 4 * 0.4;
+        const dist = sizeBase * 1.5 * debrisProgress * speed;
+        const ppx = x + Math.cos(angle) * dist;
+        const ppy = y + Math.sin(angle) * dist;
+        const size = Math.round((1 - debrisProgress) * ps);
+        ctx.fillStyle = debrisProgress < 0.4 ? '#ffaa22' : '#664422';
+        ctx.fillRect(Math.round(ppx), Math.round(ppy), size, size);
+      }
     }
     ctx.globalAlpha = 1;
   }
 
-  // Stage 4: Smoke (50-100%) — dithered gray
-  if (progress > 0.5) {
-    const smokeProgress = (progress - 0.5) / 0.5;
-    ctx.globalAlpha = (1 - smokeProgress) * 0.3;
-    const smokeSize = Math.round(sizeBase * 0.6 * (0.5 + smokeProgress * 0.5));
-    ctx.fillStyle = '#555566';
+  // Stage 5: Smoke ring (40-100%) — dithered multi-shade gray
+  if (progress > 0.4) {
+    const smokeProgress = (progress - 0.4) / 0.6;
+    ctx.globalAlpha = (1 - smokeProgress) * 0.35;
+    const smokeSize = Math.round(sizeBase * 0.7 * (0.4 + smokeProgress * 0.6));
+    const smokeColors = ['#444455', '#555566', '#3a3a4a', '#4e4e5e'];
     for (let dy = -smokeSize; dy <= smokeSize; dy += ps * 2) {
       for (let dx = -smokeSize; dx <= smokeSize; dx += ps * 2) {
         if (Math.abs(dx) + Math.abs(dy) < smokeSize * 1.2) {
+          const hash = ((dx * 3 + dy * 7) & 0xff);
+          ctx.fillStyle = smokeColors[hash % smokeColors.length];
           ctx.fillRect(Math.round(x + dx), Math.round(y + dy), ps, ps);
         }
       }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Stage 6: Final dark red embers (big only, 60-95%)
+  if (big && progress > 0.6 && progress < 0.95) {
+    const emberProgress = (progress - 0.6) / 0.35;
+    ctx.globalAlpha = (1 - emberProgress) * 0.5;
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8 + 2.1;
+      const dist = sizeBase * 0.8 * (0.5 + emberProgress * 0.5);
+      const ex = x + Math.cos(angle) * dist;
+      const ey = y + Math.sin(angle) * dist;
+      ctx.fillStyle = '#aa3300';
+      ctx.fillRect(Math.round(ex), Math.round(ey), ps, ps);
     }
     ctx.globalAlpha = 1;
   }
