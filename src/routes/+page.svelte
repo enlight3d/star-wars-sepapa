@@ -4,6 +4,7 @@
   import Starfield from '$lib/components/Starfield.svelte';
   import ClickToStart from '$lib/components/ClickToStart.svelte';
   import ImperialTerminal from '$lib/components/ImperialTerminal.svelte';
+  import BlastDoor from '$lib/components/BlastDoor.svelte';
   import TrenchRun from '$lib/components/TrenchRun.svelte';
   import FarAway from '$lib/components/FarAway.svelte';
   import LogoReveal from '$lib/components/LogoReveal.svelte';
@@ -38,26 +39,28 @@
       <ImperialTerminal onComplete={nextStep} />
     </div>
   {:else if $currentStep === 2}
+    <BlastDoor onComplete={nextStep} />
+  {:else if $currentStep === 3}
     <div in:fade={{ duration: 200 }}>
       <TrenchRun onComplete={nextStep} />
     </div>
-  {:else if $currentStep === 3}
+  {:else if $currentStep === 4}
     <div in:fade={{ duration: 300 }}>
       <FarAway onComplete={nextStep} />
     </div>
-  {:else if $currentStep === 4}
+  {:else if $currentStep === 5}
     <div in:fade={{ duration: 300 }}>
       <LogoReveal onComplete={nextStep} />
     </div>
-  {:else if $currentStep === 5}
+  {:else if $currentStep === 6}
     <div in:fade={{ duration: 300 }}>
       <CrawlText onComplete={nextStep} />
     </div>
-  {:else if $currentStep === 6}
+  {:else if $currentStep === 7}
     <div in:fade={{ duration: 500 }}>
       <VenatorBuild onComplete={nextStep} />
     </div>
-  {:else if $currentStep === 7}
+  {:else if $currentStep === 8}
     <div in:fade={{ duration: 1000 }}>
       <FinalMessage />
     </div>
