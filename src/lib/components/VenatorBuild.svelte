@@ -67,7 +67,7 @@
     // Brick-by-brick animation state
     let nextBrickIdx = 0;
     let brickTimer = 0;
-    const BRICKS_PER_SECOND = 80; // Speed of brick assembly
+    const BRICKS_PER_SECOND = 300; // Speed of brick assembly
     const halfPoint = Math.ceil(venator.bricks.length / 2);
     let paused = false;
     let currentContributorIdx = -1;
@@ -158,7 +158,7 @@
       </div>
       <p class="loading-text">RÉCEPTION ET DÉBALLAGE DES MATÉRIAUX...</p>
       <div class="progress-bar">
-        <div class="progress-fill" style="width: {$modelProgress * 100}%"></div>
+        <div class="progress-fill-anim"></div>
       </div>
       <p class="loading-sub">Préparation de 5 345 briques</p>
     </div>
@@ -209,8 +209,15 @@
   }
   .loading-text { font-size: clamp(0.8rem, 2.5vw, 1.1rem); letter-spacing: 0.1em; }
   .loading-sub { font-size: clamp(0.6rem, 1.5vw, 0.8rem); opacity: 0.5; margin-top: 1rem; }
-  .progress-bar { width: 300px; height: 6px; background: #333; margin-top: 1rem; border-radius: 3px; overflow: hidden; }
-  .progress-fill { height: 100%; background: var(--imperial-amber); transition: width 0.3s ease; }
+  .progress-bar { width: 300px; height: 4px; background: #333; margin: 1rem auto 0; border-radius: 3px; overflow: hidden; }
+  .progress-fill-anim {
+    height: 100%; width: 40%; background: var(--imperial-amber); border-radius: 3px;
+    animation: indeterminate 1.5s ease-in-out infinite;
+  }
+  @keyframes indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(750px); }
+  }
   .brick-counter { position: absolute; top: 20px; right: 20px; z-index: 20; color: var(--sw-yellow); font-family: monospace; font-size: clamp(0.8rem, 2vw, 1rem); opacity: 0.7; }
   .contributor-name { position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); z-index: 20; color: var(--sw-yellow); font-family: 'Star Jedi', sans-serif; font-size: clamp(1.5rem, 5vw, 3rem); text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); animation: fadeInUp 0.5s ease; }
   .budget-alert { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.7); animation: flicker 0.1s ease-in-out 5; }
