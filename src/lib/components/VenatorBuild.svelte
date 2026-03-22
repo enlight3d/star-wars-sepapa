@@ -67,7 +67,7 @@
     // Brick-by-brick animation state
     let nextBrickIdx = 0;
     let brickTimer = 0;
-    const BRICKS_PER_SECOND = 134; // ~30s to reach 75% build
+    const BRICKS_PER_SECOND = 200; // ~20s to reach 75% build
     const halfPoint = Math.ceil(venator.bricks.length * 0.75); // Build 75%, stop "unfinished"
     let paused = false;
     let currentContributorIdx = -1;
