@@ -5,6 +5,9 @@
   import ClickToStart from '$lib/components/ClickToStart.svelte';
   import ImperialTerminal from '$lib/components/ImperialTerminal.svelte';
   import TrenchRun from '$lib/components/TrenchRun.svelte';
+  import FarAway from '$lib/components/FarAway.svelte';
+  import LogoReveal from '$lib/components/LogoReveal.svelte';
+  import CrawlText from '$lib/components/CrawlText.svelte';
 
   let transitioning = $state(false);
 
@@ -35,6 +38,18 @@
   {:else if $currentStep === 2}
     <div in:fade={{ duration: 500 }}>
       <TrenchRun onComplete={nextStep} />
+    </div>
+  {:else if $currentStep === 3}
+    <div in:fade={{ duration: 500 }}>
+      <FarAway onComplete={nextStep} />
+    </div>
+  {:else if $currentStep === 4}
+    <div in:fade={{ duration: 300 }}>
+      <LogoReveal onComplete={nextStep} />
+    </div>
+  {:else if $currentStep === 5}
+    <div in:fade={{ duration: 300 }}>
+      <CrawlText onComplete={nextStep} />
     </div>
   {:else}
     <div in:fade={{ duration: 500 }}>
