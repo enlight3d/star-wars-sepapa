@@ -19,8 +19,8 @@
 
 <div class="logo-reveal">
   <div class="logo-container" class:big={phase === 'big'} class:readable={phase === 'readable'} class:shrinking={phase === 'shrinking'}>
-    <h1 class="title">JOYEUX<br/>ANNIVERSAIRE</h1>
-    <h2 class="subtitle">ALEXIS</h2>
+    <h1 class="title">joyeux<br/>anniversaire</h1>
+    <h2 class="subtitle">alexis</h2>
   </div>
 </div>
 

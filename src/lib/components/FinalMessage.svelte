@@ -15,8 +15,8 @@
   <div class="scanlines"></div>
 
   <div class="content" class:visible>
-    <h1 class="title">Bon Anniversaire</h1>
-    <h2 class="name">Alexis</h2>
+    <h1 class="title">bon anniversaire</h1>
+    <h2 class="name">alexis</h2>
 
     {#if showNames}
       <div class="contributors">
