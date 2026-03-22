@@ -67,10 +67,15 @@
     // Brick-by-brick animation state
     let nextBrickIdx = 0;
     let brickTimer = 0;
-    const BRICKS_PER_SECOND = 200; // ~20s to reach 75% build
-    const halfPoint = Math.ceil(venator.bricks.length * 0.75); // Build 75%, stop "unfinished"
+    const BRICKS_PER_SECOND = 200;
+    const halfPoint = Math.ceil(venator.bricks.length * 0.92);
     let paused = false;
     let currentContributorIdx = -1;
+
+    // Drop animation — bricks fall from above to their final position
+    const DROP_HEIGHT = 300; // LDraw units to drop from
+    const DROP_DURATION = 0.4; // seconds per brick drop
+    const droppingBricks: { obj: THREE.Object3D; targetY: number; elapsed: number }[] = [];
 
     function animate(timestamp: number) {
       animId = requestAnimationFrame(animate);
@@ -107,8 +112,12 @@
               break;
             }
 
-            // Reveal next brick
-            venator.bricks[nextBrickIdx].visible = true;
+            // Reveal next brick — start drop animation
+            const brick = venator.bricks[nextBrickIdx];
+            const targetY = brick.position.y;
+            brick.position.y = targetY + DROP_HEIGHT;
+            brick.visible = true;
+            droppingBricks.push({ obj: brick, targetY, elapsed: 0 });
             nextBrickIdx++;
             brickCount = nextBrickIdx;
 
@@ -124,6 +133,20 @@
               }
             }
           }
+        }
+      }
+
+      // Animate dropping bricks
+      for (let i = droppingBricks.length - 1; i >= 0; i--) {
+        const d = droppingBricks[i];
+        d.elapsed += cappedDt;
+        const t = Math.min(d.elapsed / DROP_DURATION, 1);
+        // Ease-out bounce feel
+        const eased = 1 - Math.pow(1 - t, 3);
+        d.obj.position.y = d.targetY + DROP_HEIGHT * (1 - eased);
+        if (t >= 1) {
+          d.obj.position.y = d.targetY;
+          droppingBricks.splice(i, 1);
         }
       }
 

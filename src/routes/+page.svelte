@@ -35,7 +35,7 @@
     </div>
   {:else if $currentStep === 1}
     <div in:fade={{ duration: 200 }}>
-      <ImperialTerminal onComplete={nextStep} />
+      <ImperialTerminal onComplete={() => currentStep.set(6)} />
     </div>
   {:else if $currentStep === 2}
     <div in:fade={{ duration: 200 }}>
