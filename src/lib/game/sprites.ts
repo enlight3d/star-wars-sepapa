@@ -152,7 +152,15 @@ function ensureSpritesLoaded() {
   Object.defineProperty(tie.loaded, 'center', { get: tcl });
   Object.defineProperty(tie.loaded, 'left', { get: tll });
   Object.defineProperty(tie.loaded, 'right', { get: trl });
+
+  // Millennium Falcon
+  const [fc, fcl] = loadImg(`${base}/sprites/falcon.png`);
+  falconImg = fc;
+  falconLoadedFn = fcl;
 }
+
+let falconImg: HTMLImageElement | null = null;
+let falconLoadedFn: (() => boolean) | null = null;
 
 // ── Texture images for walls/floor ──
 let wallTexture: HTMLImageElement | null = null;
@@ -1874,12 +1882,13 @@ export function drawScreenFlash(
 export function drawWingmanXWing(
   ctx: CanvasRenderingContext2D,
   x: number, y: number, scale: number,
-  alpha: number
+  alpha: number,
+  bank?: 'left' | 'right' | 'center'
 ) {
   ctx.save();
   ctx.globalAlpha = alpha;
   drawEngineTrails(ctx, x, y, scale, 'xwing');
-  drawXWing(ctx, x, y, scale * 0.85, 'center');
+  drawXWing(ctx, x, y, scale * 0.85, bank || 'center');
   ctx.globalAlpha = 1;
   ctx.restore();
 }
@@ -1903,51 +1912,19 @@ export function drawMillenniumFalcon(
   }
   ctx.globalAlpha = 1;
 
-  // Main disc body
-  const r = 18 * s;
-  ctx.fillStyle = '#8888a0';
-  for (let dy = -r; dy <= r; dy += ps) {
-    for (let dx = -r; dx <= r; dx += ps) {
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= r) {
-        // Shade variation
-        const shade = dist < r * 0.5 ? '#9999b0' : dist < r * 0.8 ? '#7777a0' : '#666690';
-        ctx.fillStyle = shade;
-        ctx.fillRect(Math.round(x + dx), Math.round(y + dy), ps, ps);
-      }
-    }
+  // Draw Falcon sprite image
+  ensureSpritesLoaded();
+  if (falconImg && falconLoadedFn && falconLoadedFn()) {
+    const imgW = falconImg.width * s * 0.8;
+    const imgH = falconImg.height * s * 0.8;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(falconImg, Math.round(x - imgW / 2), Math.round(y - imgH / 2), Math.round(imgW), Math.round(imgH));
+  } else {
+    // Fallback: simple disc
+    const r = 18 * s;
+    ctx.fillStyle = '#8888a0';
+    ctx.beginPath && ctx.fillRect(Math.round(x - r), Math.round(y - r), Math.round(r * 2), Math.round(r * 2));
   }
-
-  // Cockpit (right side tube)
-  ctx.fillStyle = '#6666a0';
-  ctx.fillRect(Math.round(x + r * 0.6), Math.round(y - 4 * s), Math.round(8 * s), Math.round(8 * s));
-  ctx.fillStyle = '#4499cc';
-  ctx.fillRect(Math.round(x + r * 0.6 + 2 * s), Math.round(y - 2 * s), Math.round(3 * s), Math.round(4 * s));
-
-  // Front mandibles
-  const mandibleW = 6 * s;
-  const mandibleH = 14 * s;
-  // Left mandible
-  ctx.fillStyle = '#7777a0';
-  ctx.fillRect(Math.round(x - mandibleW - 2 * s), Math.round(y - r - mandibleH), Math.round(mandibleW), Math.round(mandibleH));
-  ctx.fillStyle = '#8888b0';
-  ctx.fillRect(Math.round(x - mandibleW - 2 * s), Math.round(y - r - mandibleH), Math.round(mandibleW), ps);
-  // Right mandible
-  ctx.fillStyle = '#7777a0';
-  ctx.fillRect(Math.round(x + 2 * s), Math.round(y - r - mandibleH), Math.round(mandibleW), Math.round(mandibleH));
-  ctx.fillStyle = '#8888b0';
-  ctx.fillRect(Math.round(x + 2 * s), Math.round(y - r - mandibleH), Math.round(mandibleW), ps);
-
-  // Radar dish on top
-  ctx.fillStyle = '#aaaacc';
-  ctx.fillRect(Math.round(x - 3 * s), Math.round(y - 5 * s), Math.round(6 * s), Math.round(6 * s));
-  ctx.fillStyle = '#ccccee';
-  ctx.fillRect(Math.round(x - 1 * s), Math.round(y - 3 * s), Math.round(2 * s), Math.round(2 * s));
-
-  // Panel lines
-  ctx.fillStyle = '#555580';
-  ctx.fillRect(Math.round(x - r * 0.7), Math.round(y), Math.round(r * 1.4), 1);
-  ctx.fillRect(Math.round(x), Math.round(y - r * 0.5), 1, Math.round(r));
 
   ctx.restore();
 }

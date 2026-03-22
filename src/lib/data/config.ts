@@ -1,18 +1,26 @@
 export const contributors = [
-  'Thibaud', 'Marie', 'Rénald', 'Aurélien',
-  'Fabienne', 'Antoine', 'Leo', 'Jordy', 'Juliette', 'Tarik'
+  "Thibaud",
+  "Marie",
+  "Rénald",
+  "Aurélien",
+  "Fabienne",
+  "Antoine",
+  "Leo",
+  "Jordy",
+  "Juliette",
+  "Tarik",
 ];
 
-export const password = 'palpatine';
+export const password = "palpatine";
 
-export const crawlText = `Épisode XXXI
+export const crawlText = `Épisode XXXII
 
 L'ANNIVERSAIRE D'ALEXIS
 
 La galaxie est en émoi. Le Commandant
 ALEXIS, formé dans les plus prestigieuses
 académies de la République, célèbre
-aujourd'hui son trente-et-unième
+aujourd'hui son trente-deuxième
 cycle stellaire.
 
 Après avoir pris les commandes du

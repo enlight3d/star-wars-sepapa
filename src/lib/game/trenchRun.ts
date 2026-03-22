@@ -15,7 +15,7 @@ import {
   playPlayerHit, playGameOver, playVictory,
   playTieScream, playR2D2, playChewbacca,
   playSonicCharge, playBattleAlarm, stopAllGameSounds,
-  playStayOnTarget, playAlmostThere, playUseTheForce, playYahoo
+  playStayOnTarget, playAlmostThere, playUseTheForce, playIHaveYouNow, playYahoo
 } from '$lib/audio/audioManager';
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -539,6 +539,7 @@ export function createTrenchRun(
       wingman1Alive = false;
       wingman1DestroyedTime = state.elapsed;
       playExplosion();
+      playIHaveYouNow(); // Vader: "I have you now"
       screenFlashAlpha = 0.2;
       screenFlashTimer = 0.1;
       screenShakeTimer = SCREEN_SHAKE_DURATION;
@@ -548,6 +549,7 @@ export function createTrenchRun(
       wingman2Alive = false;
       wingman2DestroyedTime = state.elapsed;
       playExplosion();
+      playTieScream(0.3); // TIE scream as they close in
       screenFlashAlpha = 0.2;
       screenFlashTimer = 0.1;
       screenShakeTimer = SCREEN_SHAKE_DURATION;
@@ -1023,18 +1025,19 @@ export function createTrenchRun(
       drawTurret(ctx, t.x + t.w / 2, t.y + t.h / 2, scale, t.facingRight, t.aimAngle);
     }
 
-    // ── Wingmen (cosmetic X-Wings, Phase 1-2) ──
+    // ── Wingmen (cosmetic X-Wings, Phase 1-2) — bank with player ──
+    const playerBank = controls.left ? 'left' : controls.right ? 'right' : 'center';
     if (wingman1Alive && state.elapsed < PHASE2_GAMEPLAY_START + 10) {
       const wm1x = player.x - 55 * scale;
       const wm1y = player.y + 35 * scale;
       drawEngineTrails(ctx, wm1x, wm1y, scale * 0.85, 'xwing');
-      drawWingmanXWing(ctx, wm1x, wm1y, scale, 0.85);
+      drawWingmanXWing(ctx, wm1x, wm1y, scale, 0.85, playerBank as any);
     }
     if (wingman2Alive && state.elapsed < PHASE2_GAMEPLAY_START + 18) {
       const wm2x = player.x + 55 * scale;
       const wm2y = player.y + 40 * scale;
       drawEngineTrails(ctx, wm2x, wm2y, scale * 0.85, 'xwing');
-      drawWingmanXWing(ctx, wm2x, wm2y, scale, 0.85);
+      drawWingmanXWing(ctx, wm2x, wm2y, scale, 0.85, playerBank as any);
     }
 
     // Wingman destruction explosions (brief)
