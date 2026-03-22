@@ -358,8 +358,81 @@ export function drawTurret(
   _aimAngle: number = 0
 ) {
   ctx.save();
-  const rows = facingRight ? TURRET_ROWS_RIGHT : TURRET_ROWS_LEFT;
-  drawSprite(ctx, rows, TURRET_PALETTE, x, y, scale);
+  const s = scale;
+  const ps = PS;
+  const dir = facingRight ? 1 : -1;
+
+  // Trapezoid tower base (top-down view: wider at back, narrower at front)
+  // Back (away from trench)
+  const baseW = 18 * s;
+  const baseH = 20 * s;
+  const topW = 14 * s;
+
+  // Draw trapezoid as stacked rectangles (wider to narrower)
+  for (let row = 0; row < baseH; row += ps) {
+    const t = row / baseH;
+    const rowW = baseW - (baseW - topW) * t;
+    const shade = t < 0.3 ? '#4a4a55' : t < 0.7 ? '#3a3a42' : '#2a2a30';
+    ctx.fillStyle = shade;
+    ctx.fillRect(Math.round(x - rowW / 2), Math.round(y - baseH / 2 + row), Math.round(rowW), ps);
+  }
+
+  // Panel lines on the tower
+  ctx.fillStyle = '#1a1a1e';
+  ctx.fillRect(Math.round(x - 1), Math.round(y - baseH / 2), ps, Math.round(baseH));
+  ctx.fillRect(Math.round(x - topW / 2 + 2 * s), Math.round(y), Math.round(topW - 4 * s), 1);
+
+  // Top platform (where barrels sit) — lighter
+  ctx.fillStyle = '#5a5a68';
+  ctx.fillRect(Math.round(x - topW / 2 + 2 * s), Math.round(y - 4 * s), Math.round(topW - 4 * s), Math.round(8 * s));
+  ctx.fillStyle = '#4a4a55';
+  ctx.fillRect(Math.round(x - topW / 2 + 3 * s), Math.round(y - 3 * s), Math.round(topW - 6 * s), Math.round(6 * s));
+
+  // Twin barrels extending toward the trench
+  const barrelLen = 14 * s;
+  const barrelW = 3 * s;
+  const barrelGap = 4 * s;
+  const barrelStartX = x + dir * (topW / 2 - 2 * s);
+
+  // Barrel 1
+  ctx.fillStyle = '#3a3a42';
+  ctx.fillRect(
+    Math.round(facingRight ? barrelStartX : barrelStartX - barrelLen),
+    Math.round(y - barrelGap / 2 - barrelW),
+    Math.round(barrelLen), Math.round(barrelW)
+  );
+  // Barrel 1 highlight
+  ctx.fillStyle = '#5a5a68';
+  ctx.fillRect(
+    Math.round(facingRight ? barrelStartX : barrelStartX - barrelLen),
+    Math.round(y - barrelGap / 2 - barrelW),
+    Math.round(barrelLen), 1
+  );
+
+  // Barrel 2
+  ctx.fillStyle = '#3a3a42';
+  ctx.fillRect(
+    Math.round(facingRight ? barrelStartX : barrelStartX - barrelLen),
+    Math.round(y + barrelGap / 2),
+    Math.round(barrelLen), Math.round(barrelW)
+  );
+  ctx.fillStyle = '#5a5a68';
+  ctx.fillRect(
+    Math.round(facingRight ? barrelStartX : barrelStartX - barrelLen),
+    Math.round(y + barrelGap / 2),
+    Math.round(barrelLen), 1
+  );
+
+  // Barrel muzzle glow (green — turbolaser)
+  const muzzleX = facingRight ? barrelStartX + barrelLen - 2 * s : barrelStartX - barrelLen;
+  ctx.fillStyle = '#33ff44';
+  ctx.globalAlpha = 0.6;
+  ctx.fillRect(Math.round(muzzleX), Math.round(y - barrelGap / 2 - barrelW - 1), Math.round(3 * s), Math.round(barrelGap + barrelW * 2 + 2));
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#88ff88';
+  ctx.fillRect(Math.round(muzzleX + s), Math.round(y - barrelGap / 2 - barrelW / 2), Math.round(ps), Math.round(barrelW));
+  ctx.fillRect(Math.round(muzzleX + s), Math.round(y + barrelGap / 2), Math.round(ps), Math.round(barrelW));
+
   ctx.restore();
 }
 
