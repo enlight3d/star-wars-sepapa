@@ -1,15 +1,12 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { createKeyboardControls, createTouchControls } from '$lib/game/controls';
+  import { createKeyboardControls, createJoystickControls } from '$lib/game/controls';
   import { createTrenchRun } from '$lib/game/trenchRun';
 
   let { onComplete }: { onComplete: () => void } = $props();
 
   let canvas: HTMLCanvasElement;
-  let upBtn: HTMLButtonElement;
-  let downBtn: HTMLButtonElement;
-  let leftBtn: HTMLButtonElement;
-  let rightBtn: HTMLButtonElement;
+  let joystickContainer: HTMLDivElement;
   let fireBtn: HTMLButtonElement;
 
   let destroyGame: (() => void) | null = null;
@@ -32,9 +29,9 @@
     const { controls: kbControls, destroy: kbDestroy } = createKeyboardControls();
     destroyKeyboard = kbDestroy;
 
-    if (isMobile && upBtn && downBtn && leftBtn && rightBtn && fireBtn) {
-      const { controls: touchControls, destroy: tDestroy } = createTouchControls(
-        upBtn, downBtn, leftBtn, rightBtn, fireBtn
+    if (isMobile && joystickContainer && fireBtn) {
+      const { controls: touchControls, destroy: tDestroy } = createJoystickControls(
+        joystickContainer, fireBtn
       );
       destroyTouch = tDestroy;
       // Merge touch + keyboard controls
@@ -74,21 +71,9 @@
 
   <canvas bind:this={canvas} class="game-canvas"></canvas>
 
-  <!-- Touch controls: d-pad left, fire right. Always rendered for bind:this -->
+  <!-- Touch controls: joystick left, fire right. Always rendered for bind:this -->
   <div class="touch-controls" class:hidden={!isMobile}>
-    <div class="dpad">
-      <div class="dpad-row">
-        <button bind:this={upBtn} class="touch-btn dpad-btn up" aria-label="Haut">&#9650;</button>
-      </div>
-      <div class="dpad-row middle">
-        <button bind:this={leftBtn} class="touch-btn dpad-btn left" aria-label="Gauche">&#9664;</button>
-        <div class="dpad-center"></div>
-        <button bind:this={rightBtn} class="touch-btn dpad-btn right" aria-label="Droite">&#9654;</button>
-      </div>
-      <div class="dpad-row">
-        <button bind:this={downBtn} class="touch-btn dpad-btn down" aria-label="Bas">&#9660;</button>
-      </div>
-    </div>
+    <div bind:this={joystickContainer} class="joystick-zone" aria-label="Joystick"></div>
 
     <div class="right-controls">
       <button bind:this={fireBtn} class="touch-btn fire" aria-label="Tirer">
@@ -163,30 +148,16 @@
     display: none;
   }
 
-  /* ── D-Pad ─────────────────────────────────────────────── */
-  .dpad {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .dpad-row {
-    display: flex;
-    justify-content: center;
-  }
-
-  .dpad-row.middle {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .dpad-center {
-    width: 50px;
-    height: 50px;
-    background: rgba(255, 215, 0, 0.05);
-    border-radius: 4px;
+  /* ── Joystick ────────────────────────────────────────────── */
+  .joystick-zone {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
   }
 
   .touch-btn {
@@ -204,16 +175,6 @@
 
   .touch-btn:active {
     background: rgba(255, 215, 0, 0.3);
-  }
-
-  .dpad-btn {
-    width: 50px;
-    height: 50px;
-    font-size: 1.2rem;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
   .touch-btn.fire {
