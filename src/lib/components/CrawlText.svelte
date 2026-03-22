@@ -8,23 +8,27 @@
 
   onMount(() => {
     if (crawlEl) {
-      // Check periodically if text has scrolled out of view
-      const checkInterval = setInterval(() => {
-        const rect = crawlEl.getBoundingClientRect();
-        // When the bottom edge of the text passes above the viewport top, we're done
-        if (rect.bottom < 0) {
-          clearInterval(checkInterval);
-          onComplete();
-        }
-      }, 500);
+      // Calculate how long the text actually needs to scroll based on content height
+      // The animation goes from translateY(100vh) to translateY(-200%)
+      // Text is done when it has traveled: viewport height + text height
+      // At a constant speed over DURATION seconds
+      const textHeight = crawlEl.scrollHeight;
+      const viewportHeight = window.innerHeight;
+      const totalTravel = viewportHeight + textHeight;
+      const animDuration = 45; // must match CSS animation duration
+      // The CSS moves from 100vh to -200% of element height
+      // Total CSS distance = viewportHeight + 2 * textHeight
+      const totalCssTravel = viewportHeight + 2 * textHeight;
+      // Time when text bottom reaches viewport top:
+      const doneTime = (totalTravel / totalCssTravel) * animDuration;
 
-      // Fallback: also listen for animationend
-      crawlEl.addEventListener('animationend', () => {
-        clearInterval(checkInterval);
+      console.log(`Crawl: textH=${textHeight}, doneTime=${doneTime.toFixed(1)}s`);
+
+      const timer = setTimeout(() => {
         onComplete();
-      }, { once: true });
+      }, doneTime * 1000);
 
-      return () => clearInterval(checkInterval);
+      return () => clearTimeout(timer);
     }
   });
 </script>
