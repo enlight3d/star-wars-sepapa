@@ -39,8 +39,7 @@
       return;
     }
 
-    // Step 2: Fade out the Star Wars theme, create the 3D scene
-    fadeOutStarWarsTheme(3000);
+    // Step 2: Keep the theme playing through the build scene
     showLoading = false;
 
     const scene = new THREE.Scene();

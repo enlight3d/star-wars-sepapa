@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { contributors } from '$lib/data/config';
+  import { fadeOutStarWarsTheme } from '$lib/audio/audioManager';
 
   let visible = $state(false);
   let showNames = $state(false);
 
   onMount(() => {
+    fadeOutStarWarsTheme(5000);
     setTimeout(() => visible = true, 500);
     setTimeout(() => showNames = true, 2000);
   });
