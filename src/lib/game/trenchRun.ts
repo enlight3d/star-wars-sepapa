@@ -26,6 +26,9 @@ export interface GameState {
   score: number;
   completed: boolean;
   elapsed: number;
+  hp: number;
+  maxHp: number;
+  gameOver: boolean;
 }
 
 // ── Constants ───────────────────────────────────────────────────────
@@ -73,7 +76,8 @@ export function createTrenchRun(
     };
   }
 
-  const state: GameState = { running: true, score: 0, completed: false, elapsed: 0 };
+  const MAX_HP = 5;
+  const state: GameState = { running: true, score: 0, completed: false, elapsed: 0, hp: MAX_HP, maxHp: MAX_HP, gameOver: false };
 
   // Player (center-bottom of trench)
   const initBounds = getTrenchBounds(0);
@@ -162,6 +166,11 @@ export function createTrenchRun(
     if (player.invincibleTimer > 0) return;
     player.invincibleTimer = INVINCIBILITY_DURATION;
     screenShakeTimer = SCREEN_SHAKE_DURATION;
+    state.hp--;
+    if (state.hp <= 0) {
+      state.gameOver = true;
+      state.running = false;
+    }
   }
 
   // ── Update ────────────────────────────────────────────────────────
@@ -498,6 +507,52 @@ export function createTrenchRun(
       ctx.globalAlpha = 1;
     }
 
+    // HUD - HP bar (top right)
+    const hpBarW = 80 * (cw / 400);
+    const hpBarH = 8;
+    const hpBarX = cw - hpBarW - 10;
+    const hpBarY = 17;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(hpBarX, hpBarY, hpBarW, hpBarH);
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(hpBarX, hpBarY, hpBarW, hpBarH);
+    const hpRatio = state.hp / state.maxHp;
+    ctx.fillStyle = hpRatio > 0.5 ? '#00e676' : hpRatio > 0.25 ? '#ff8f00' : '#ff1744';
+    ctx.fillRect(hpBarX, hpBarY, hpBarW * hpRatio, hpBarH);
+    ctx.fillStyle = '#aaa';
+    ctx.font = `${Math.round(10 * (cw / 400))}px monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText('BOUCLIER', hpBarX - 5, hpBarY + hpBarH - 1);
+    ctx.textAlign = 'left';
+
+    // Game Over — Palpatine takes over
+    if (state.gameOver) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.fillRect(-5, -5, cw + 10, ch + 10);
+
+      ctx.textAlign = 'center';
+
+      // Red Imperial symbol / warning
+      ctx.fillStyle = '#ff1744';
+      ctx.font = `bold ${Math.round(28 * (cw / 400))}px monospace`;
+      ctx.shadowColor = '#ff1744';
+      ctx.shadowBlur = 20;
+      ctx.fillText('MISSION ÉCHOUÉE', cw / 2, ch / 2 - 60);
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#ff8f00';
+      ctx.font = `${Math.round(14 * (cw / 400))}px monospace`;
+      ctx.fillText('L\'Empire a pris le dessus...', cw / 2, ch / 2 - 20);
+      ctx.fillText('Palpatine ricane dans l\'ombre.', cw / 2, ch / 2 + 5);
+
+      ctx.fillStyle = '#4fc3f7';
+      ctx.font = `${Math.round(16 * (cw / 400))}px monospace`;
+      ctx.fillText('[ APPUIE POUR RÉESSAYER ]', cw / 2, ch / 2 + 60);
+
+      ctx.textAlign = 'left';
+    }
+
     // End sequence overlay
     if (endFadeAlpha > 0) {
       ctx.fillStyle = `rgba(0, 0, 0, ${endFadeAlpha})`;
@@ -526,12 +581,50 @@ export function createTrenchRun(
     ctx.restore();
   }
 
+  // ── Restart ──────────────────────────────────────────────────────
+  function restart() {
+    state.running = true;
+    state.score = 0;
+    state.completed = false;
+    state.elapsed = 0;
+    state.hp = MAX_HP;
+    state.gameOver = false;
+    endFadeAlpha = 0;
+    endShowMessage = false;
+    endTriggered = false;
+    ties.length = 0;
+    turrets.length = 0;
+    lasers.length = 0;
+    explosions.length = 0;
+    tieSpawnTimer = 0;
+    turretSpawnTimer = 0;
+    fireCooldown = 0;
+    scrollOffset = 0;
+    screenShakeTimer = 0;
+    lastTime = 0;
+    const initB = getTrenchBounds(0);
+    player.x = (initB.left + initB.right) / 2;
+    player.y = ch * 0.78;
+    player.invincibleTimer = 1; // Brief invincibility on restart
+  }
+
+  // Listen for restart click/tap
+  function onRestartClick() {
+    if (state.gameOver) {
+      restart();
+    }
+  }
+  canvas.addEventListener('click', onRestartClick);
+  canvas.addEventListener('touchstart', onRestartClick);
+
   // ── Game Loop ─────────────────────────────────────────────────────
   function gameLoop(timestamp: number) {
-    if (!state.running && state.completed) return;
+    if (state.completed) return;
     const dt = lastTime ? (timestamp - lastTime) / 1000 : 0.016;
     lastTime = timestamp;
-    update(Math.min(dt, 0.05));
+    if (state.running) {
+      update(Math.min(dt, 0.05));
+    }
     render();
     animId = requestAnimationFrame(gameLoop);
   }
@@ -543,6 +636,8 @@ export function createTrenchRun(
     destroy: () => {
       state.running = false;
       cancelAnimationFrame(animId);
+      canvas.removeEventListener('click', onRestartClick);
+      canvas.removeEventListener('touchstart', onRestartClick);
     }
   };
 }
