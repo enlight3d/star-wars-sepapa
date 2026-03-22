@@ -44,6 +44,9 @@ export async function loadVenator(): Promise<{ groups: BrickGroup[], root: THREE
     await yieldToMain();
     modelProgress.set(0.7);
 
+    // LDraw Y-axis points down — flip the model
+    merged.rotation.x = Math.PI;
+
     // Center the model at origin
     const box = new THREE.Box3().setFromObject(merged);
     const center = box.getCenter(new THREE.Vector3());

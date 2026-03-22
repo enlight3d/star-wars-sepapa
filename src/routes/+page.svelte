@@ -10,19 +10,8 @@
   import CrawlText from '$lib/components/CrawlText.svelte';
   import VenatorBuild from '$lib/components/VenatorBuild.svelte';
   import FinalMessage from '$lib/components/FinalMessage.svelte';
-  import { loadVenator } from '$lib/three/venatorLoader';
 
   let transitioning = $state(false);
-
-  let preloadPromise: Promise<any> | null = null;
-  $effect(() => {
-    // Start preloading during the trench run (step 2) — the game loop
-    // runs on requestAnimationFrame so the main thread pause from LDraw
-    // parsing won't be noticeable during gameplay
-    if ($currentStep >= 1 && !preloadPromise) {
-      preloadPromise = loadVenator().catch(err => console.warn('Preload failed:', err));
-    }
-  });
 
   function nextStep() {
     transitioning = true;
