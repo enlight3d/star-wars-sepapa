@@ -110,42 +110,49 @@ const XWING_ROWS = [
 ];
 
 // ── Image-based sprites (loaded from PNG files) ─────────────────────
+import { base } from '$app/paths';
+
 interface SpriteSet {
-  center: HTMLImageElement;
-  left: HTMLImageElement;
-  right: HTMLImageElement;
+  center: HTMLImageElement | null;
+  left: HTMLImageElement | null;
+  right: HTMLImageElement | null;
   loaded: { center: boolean; left: boolean; right: boolean };
 }
 
-const xwing: SpriteSet = {
-  center: new Image(), left: new Image(), right: new Image(),
-  loaded: { center: false, left: false, right: false }
-};
+const xwing: SpriteSet = { center: null, left: null, right: null, loaded: { center: false, left: false, right: false } };
+const tie: SpriteSet = { center: null, left: null, right: null, loaded: { center: false, left: false, right: false } };
 
-const tie: SpriteSet = {
-  center: new Image(), left: new Image(), right: new Image(),
-  loaded: { center: false, left: false, right: false }
-};
+let spritesInitialized = false;
 
-import { base } from '$app/paths';
+function ensureSpritesLoaded() {
+  if (spritesInitialized || typeof window === 'undefined') return;
+  spritesInitialized = true;
 
-function initSprites() {
-  xwing.center.onload = () => { xwing.loaded.center = true; };
-  xwing.left.onload = () => { xwing.loaded.left = true; };
-  xwing.right.onload = () => { xwing.loaded.right = true; };
-  xwing.center.src = `${base}/sprites/xwing.png`;
-  xwing.left.src = `${base}/sprites/xwing_left.png`;
-  xwing.right.src = `${base}/sprites/xwing_right.png`;
+  function loadImg(src: string): [HTMLImageElement, () => boolean] {
+    const img = new Image();
+    let loaded = false;
+    img.onload = () => { loaded = true; };
+    img.src = src;
+    return [img, () => loaded];
+  }
 
-  tie.center.onload = () => { tie.loaded.center = true; };
-  tie.left.onload = () => { tie.loaded.left = true; };
-  tie.right.onload = () => { tie.loaded.right = true; };
-  tie.center.src = `${base}/sprites/tie.png`;
-  tie.left.src = `${base}/sprites/tie_left.png`;
-  tie.right.src = `${base}/sprites/tie_right.png`;
+  const [xc, xcl] = loadImg(`${base}/sprites/xwing.png`);
+  const [xl, xll] = loadImg(`${base}/sprites/xwing_left.png`);
+  const [xr, xrl] = loadImg(`${base}/sprites/xwing_right.png`);
+  xwing.center = xc; xwing.left = xl; xwing.right = xr;
+  // Update loaded status via getter
+  Object.defineProperty(xwing.loaded, 'center', { get: xcl });
+  Object.defineProperty(xwing.loaded, 'left', { get: xll });
+  Object.defineProperty(xwing.loaded, 'right', { get: xrl });
+
+  const [tc, tcl] = loadImg(`${base}/sprites/tie.png`);
+  const [tl, tll] = loadImg(`${base}/sprites/tie_left.png`);
+  const [tr, trl] = loadImg(`${base}/sprites/tie_right.png`);
+  tie.center = tc; tie.left = tl; tie.right = tr;
+  Object.defineProperty(tie.loaded, 'center', { get: tcl });
+  Object.defineProperty(tie.loaded, 'left', { get: tll });
+  Object.defineProperty(tie.loaded, 'right', { get: trl });
 }
-
-initSprites();
 
 // Size multiplier — controls how big sprites render (lower = smaller ships)
 const SPRITE_SCALE = 0.65;
@@ -156,8 +163,9 @@ function drawImgSprite(
   x: number, y: number, scale: number,
   bank?: 'left' | 'right' | 'center'
 ) {
+  ensureSpritesLoaded();
   const img = sprites.center;
-  if (!sprites.loaded.center || !img.complete) return false;
+  if (!img || !sprites.loaded.center || !img.complete) return false;
 
   const w = img.width * scale * SPRITE_SCALE;
   const h = img.height * scale * SPRITE_SCALE;
