@@ -8,8 +8,7 @@
 
   onMount(() => {
     if (crawlEl) {
-      // Transition after 35 seconds — text should be fully scrolled by then
-      const timer = setTimeout(onComplete, 35000);
+      const timer = setTimeout(onComplete, 30000);
       return () => clearTimeout(timer);
     }
   });
