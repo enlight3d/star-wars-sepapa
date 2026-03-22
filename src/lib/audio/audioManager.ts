@@ -244,6 +244,98 @@ export function stopStarWarsTheme() {
   starWarsTheme?.stop();
 }
 
+// ── Blast door sound ─────────────────────────────────────────────
+export function playBlastDoorSound() {
+  const ctx = getAudioContext();
+  const t = ctx.currentTime;
+  const duration = 2.0;
+
+  // Heavy metallic clunk — door unlocking
+  const clunk = ctx.createOscillator();
+  const clunkGain = ctx.createGain();
+  clunk.connect(clunkGain);
+  clunkGain.connect(ctx.destination);
+  clunk.type = 'sawtooth';
+  clunk.frequency.setValueAtTime(120, t);
+  clunk.frequency.exponentialRampToValueAtTime(30, t + 0.15);
+  clunkGain.gain.setValueAtTime(0.15, t);
+  clunkGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+  clunk.start(t);
+  clunk.stop(t + 0.2);
+
+  // Hydraulic hiss — sustained white noise sweep
+  const bufferSize = ctx.sampleRate * duration;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = (Math.random() * 2 - 1);
+  }
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.setValueAtTime(3000, t + 0.1);
+  noiseFilter.frequency.exponentialRampToValueAtTime(800, t + 1.0);
+  noiseFilter.frequency.exponentialRampToValueAtTime(400, t + duration);
+  noiseFilter.Q.value = 1.5;
+  const noiseGain = ctx.createGain();
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  noiseGain.gain.setValueAtTime(0, t);
+  noiseGain.gain.linearRampToValueAtTime(0.12, t + 0.15);
+  noiseGain.gain.setValueAtTime(0.10, t + 0.5);
+  noiseGain.gain.linearRampToValueAtTime(0.06, t + 1.2);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+  noise.start(t + 0.05);
+  noise.stop(t + duration);
+
+  // Mechanical grinding — low rumble
+  const grind = ctx.createOscillator();
+  const grindGain = ctx.createGain();
+  grind.connect(grindGain);
+  grindGain.connect(ctx.destination);
+  grind.type = 'sawtooth';
+  grind.frequency.setValueAtTime(45, t + 0.1);
+  grind.frequency.linearRampToValueAtTime(35, t + 1.5);
+  grindGain.gain.setValueAtTime(0, t);
+  grindGain.gain.linearRampToValueAtTime(0.08, t + 0.2);
+  grindGain.gain.setValueAtTime(0.06, t + 1.0);
+  grindGain.gain.exponentialRampToValueAtTime(0.001, t + 1.6);
+  grind.start(t + 0.1);
+  grind.stop(t + 1.6);
+
+  // Second metallic impact — door hitting end stop
+  const slam = ctx.createOscillator();
+  const slamGain = ctx.createGain();
+  slam.connect(slamGain);
+  slamGain.connect(ctx.destination);
+  slam.type = 'sawtooth';
+  slam.frequency.setValueAtTime(80, t + 1.4);
+  slam.frequency.exponentialRampToValueAtTime(25, t + 1.6);
+  slamGain.gain.setValueAtTime(0, t + 1.4);
+  slamGain.gain.linearRampToValueAtTime(0.12, t + 1.42);
+  slamGain.gain.exponentialRampToValueAtTime(0.001, t + 1.7);
+  slam.start(t + 1.4);
+  slam.stop(t + 1.7);
+
+  // Servo motor whine
+  const servo = ctx.createOscillator();
+  const servoGain = ctx.createGain();
+  servo.connect(servoGain);
+  servoGain.connect(ctx.destination);
+  servo.type = 'sine';
+  servo.frequency.setValueAtTime(200, t + 0.1);
+  servo.frequency.linearRampToValueAtTime(350, t + 0.8);
+  servo.frequency.linearRampToValueAtTime(150, t + 1.4);
+  servoGain.gain.setValueAtTime(0, t + 0.1);
+  servoGain.gain.linearRampToValueAtTime(0.03, t + 0.3);
+  servoGain.gain.setValueAtTime(0.03, t + 1.0);
+  servoGain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+  servo.start(t + 0.1);
+  servo.stop(t + 1.5);
+}
+
 // ── Venator scene ────────────────────────────────────────────────
 export function playBrickPlace() {
   const ctx = getAudioContext();

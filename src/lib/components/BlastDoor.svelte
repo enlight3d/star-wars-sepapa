@@ -1,24 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Howl } from 'howler';
+  import { playBlastDoorSound } from '$lib/audio/audioManager';
 
   let { onComplete }: { onComplete: () => void } = $props();
 
   let phase = $state<'closed' | 'unlocking' | 'opening' | 'open'>('closed');
 
   onMount(() => {
-    const doorSound = new Howl({
-      src: ['/audio/blast-door.mp3'],
-      volume: 0.8,
-    });
-
     setTimeout(() => {
       phase = 'unlocking';
     }, 300);
 
     setTimeout(() => {
       phase = 'opening';
-      doorSound.play();
+      playBlastDoorSound();
     }, 900);
 
     setTimeout(() => {
