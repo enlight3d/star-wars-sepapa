@@ -2,6 +2,8 @@
 
 An interactive Star Wars-themed birthday card webapp built with love by the team.
 
+**Live:** [https://enlight3d.github.io/star-wars-sepapa/](https://enlight3d.github.io/star-wars-sepapa/)
+
 ## The Experience
 
 1. **Click to Start** — Starfield with suspense
@@ -28,6 +30,7 @@ An interactive Star Wars-themed birthday card webapp built with love by the team
 ## Cheat Codes
 
 Type in the Imperial Terminal:
+- `palpatine` — The password to enter
 - `iddqd` — Skip to cinematic (bypass mini-game)
 - `idkfa` — Skip to Venator 3D model
 
