@@ -7,6 +7,56 @@ export function getAudioContext(): AudioContext {
   return sharedAudioCtx;
 }
 
+// ── Boot sound ───────────────────────────────────────────────────
+export function playBootSound() {
+  const ctx = getAudioContext();
+  const t = ctx.currentTime;
+
+  // POST beep (like old BIOS)
+  const beep = ctx.createOscillator();
+  const beepGain = ctx.createGain();
+  beep.connect(beepGain);
+  beepGain.connect(ctx.destination);
+  beep.type = 'square';
+  beep.frequency.value = 1000;
+  beepGain.gain.setValueAtTime(0.08, t);
+  beepGain.gain.setValueAtTime(0.08, t + 0.15);
+  beepGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  beep.start(t);
+  beep.stop(t + 0.2);
+
+  // HDD seek noise
+  for (let i = 0; i < 6; i++) {
+    const click = ctx.createOscillator();
+    const clickGain = ctx.createGain();
+    click.connect(clickGain);
+    clickGain.connect(ctx.destination);
+    click.type = 'sawtooth';
+    click.frequency.value = 40 + Math.random() * 30;
+    const startT = t + 0.3 + i * 0.12;
+    clickGain.gain.setValueAtTime(0, startT);
+    clickGain.gain.linearRampToValueAtTime(0.04, startT + 0.01);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, startT + 0.06);
+    click.start(startT);
+    click.stop(startT + 0.06);
+  }
+
+  // CRT power-on hum
+  const hum = ctx.createOscillator();
+  const humGain = ctx.createGain();
+  hum.connect(humGain);
+  humGain.connect(ctx.destination);
+  hum.type = 'sine';
+  hum.frequency.setValueAtTime(50, t);
+  hum.frequency.linearRampToValueAtTime(60, t + 1.5);
+  humGain.gain.setValueAtTime(0, t);
+  humGain.gain.linearRampToValueAtTime(0.04, t + 0.5);
+  humGain.gain.setValueAtTime(0.04, t + 1.0);
+  humGain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+  hum.start(t);
+  hum.stop(t + 1.5);
+}
+
 // ── Terminal ──────────────────────────────────────────────────────
 export function playTerminalBeep() {
   const ctx = getAudioContext();
