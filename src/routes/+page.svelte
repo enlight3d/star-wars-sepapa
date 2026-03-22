@@ -8,8 +8,17 @@
   import FarAway from '$lib/components/FarAway.svelte';
   import LogoReveal from '$lib/components/LogoReveal.svelte';
   import CrawlText from '$lib/components/CrawlText.svelte';
+  import VenatorBuild from '$lib/components/VenatorBuild.svelte';
+  import FinalMessage from '$lib/components/FinalMessage.svelte';
+  import { loadVenator } from '$lib/three/venatorLoader';
 
   let transitioning = $state(false);
+  let preloadPromise: Promise<any> | null = null;
+  $effect(() => {
+    if ($currentStep >= 1 && !preloadPromise) {
+      preloadPromise = loadVenator().catch(err => console.warn('Preload failed:', err));
+    }
+  });
 
   function nextStep() {
     transitioning = true;
@@ -51,11 +60,13 @@
     <div in:fade={{ duration: 300 }}>
       <CrawlText onComplete={nextStep} />
     </div>
-  {:else}
+  {:else if $currentStep === 6}
     <div in:fade={{ duration: 500 }}>
-      <p style="color: white; text-align: center; margin-top: 40vh;">
-        Step {$currentStep} — Coming soon
-      </p>
+      <VenatorBuild onComplete={nextStep} />
+    </div>
+  {:else if $currentStep === 7}
+    <div in:fade={{ duration: 1000 }}>
+      <FinalMessage />
     </div>
   {/if}
 </main>
