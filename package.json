@@ -1,0 +1,23 @@
+{
+  "name": "sepapa",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "type": "module",
+  "dependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.55.0",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@types/howler": "^2.2.12",
+    "@types/three": "^0.183.1",
+    "howler": "^2.2.4",
+    "svelte": "^5.54.1",
+    "three": "^0.183.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.1"
+  }
+}

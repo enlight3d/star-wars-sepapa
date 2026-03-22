@@ -1,0 +1,38 @@
+@font-face {
+  font-family: 'Star Jedi';
+  src: url('/fonts/StarJedi.woff2') format('woff2'),
+       url('/fonts/Starjedi.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --sw-yellow: #ffd700;
+  --sw-blue: #4fc3f7;
+  --sw-red: #ff1744;
+  --sw-green: #00e676;
+  --imperial-bg: #0a0a0a;
+  --imperial-amber: #ff8f00;
+  --hologram-blue: #00bcd4;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.star-wars-font {
+  font-family: 'Star Jedi', sans-serif;
+}
