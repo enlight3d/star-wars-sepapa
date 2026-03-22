@@ -619,18 +619,45 @@ export function drawTrenchFloor(
   ctx.fillStyle = '#050510';
   ctx.fillRect(left, 0, w, height);
 
-  // Surface detail panels (subtle shade variation)
-  const detailH = 24;
-  const detailW = 20;
-  const detailOff = scrollOffset % detailH;
-  const panelShades = ['#06061a', '#080814', '#0a0a1e', '#050512'];
-  for (let dy = -detailOff; dy < height; dy += detailH) {
-    for (let dx = left; dx < right; dx += detailW) {
-      const hash = ((dx * 11 + dy * 7 + 53) & 0xff);
-      ctx.fillStyle = panelShades[hash % panelShades.length];
-      ctx.fillRect(Math.round(dx), Math.round(dy), detailW, detailH);
+  // ── LAYER 1 (deepest, slowest parallax 0.4x): Large structural plates ──
+  const deepOff = (scrollOffset * 0.4) % 64;
+  const deepShades = ['#040410', '#06060e', '#050512', '#03030c'];
+  for (let dy = -deepOff; dy < height; dy += 64) {
+    for (let dx = left; dx < right; dx += 48) {
+      const hash = ((dx * 3 + dy * 5 + 17) & 0xff);
+      ctx.fillStyle = deepShades[hash % deepShades.length];
+      ctx.fillRect(Math.round(dx), Math.round(dy), 48, 64);
+      // Panel border — subtle depth
+      ctx.fillStyle = '#0a0a18';
+      ctx.fillRect(Math.round(dx), Math.round(dy), 48, 1);
+      ctx.fillRect(Math.round(dx), Math.round(dy), 1, 64);
+      ctx.fillStyle = '#020208';
+      ctx.fillRect(Math.round(dx), Math.round(dy + 63), 48, 1);
+      ctx.fillRect(Math.round(dx + 47), Math.round(dy), 1, 64);
     }
   }
+
+  // ── LAYER 2 (mid, 0.7x parallax): Smaller surface panels + machinery ──
+  const midOff = (scrollOffset * 0.7) % 24;
+  const panelShades = ['#06061a', '#080814', '#0a0a1e', '#050512'];
+  for (let dy = -midOff; dy < height; dy += 24) {
+    for (let dx = left; dx < right; dx += 20) {
+      const hash = ((dx * 11 + dy * 7 + 53) & 0xff);
+      ctx.fillStyle = panelShades[hash % panelShades.length];
+      ctx.fillRect(Math.round(dx), Math.round(dy), 20, 24);
+    }
+  }
+  // Mid-layer pipes (horizontal, 0.7x parallax)
+  const midPipeOff = (scrollOffset * 0.7) % 80;
+  ctx.fillStyle = '#0e0e1e';
+  for (let dy = -midPipeOff; dy < height; dy += 80) {
+    ctx.fillRect(left, Math.round(dy), w, 3);
+    ctx.fillStyle = '#141428';
+    ctx.fillRect(left, Math.round(dy), w, 1);
+    ctx.fillStyle = '#0e0e1e';
+  }
+
+  // ── LAYER 3 (surface, full 1.0x scroll): Grid, details, groove ──
 
   // Grid lines — dark cyan (#0a2a3a)
   const gridSize = 32;
