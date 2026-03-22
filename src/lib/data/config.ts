@@ -48,11 +48,10 @@ fruit de la contribution de onze
 officiers de la flotte, est sur
 le point d'être révélé...
 
-Un allié spécial, ANTHONY, a
-sécurisé des ressources
-supplémentaires pour l'Empire,
-consolidant les forces en
-présence.
+Les forces d'élite mmmtroopers
+ont sécurisé des ressources
+supplémentaires, consolidant
+les moyens de la flotte.
 
 Que la Force soit avec toi,
 Alexis.`;

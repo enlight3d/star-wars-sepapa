@@ -388,50 +388,36 @@ export function drawTurret(
   ctx.fillStyle = '#4a4a55';
   ctx.fillRect(Math.round(x - topW / 2 + 3 * s), Math.round(y - 3 * s), Math.round(topW - 6 * s), Math.round(6 * s));
 
-  // Twin barrels extending toward the trench
+  // Twin barrels — rotate with aimAngle
   const barrelLen = 14 * s;
   const barrelW = 3 * s;
   const barrelGap = 4 * s;
-  const barrelStartX = x + dir * (topW / 2 - 2 * s);
 
-  // Barrel 1
+  // Rotate barrel assembly around turret center
+  ctx.translate(x, y);
+  ctx.rotate(_aimAngle);
+
+  // Barrel 1 (upper)
   ctx.fillStyle = '#3a3a42';
-  ctx.fillRect(
-    Math.round(facingRight ? barrelStartX : barrelStartX - barrelLen),
-    Math.round(y - barrelGap / 2 - barrelW),
-    Math.round(barrelLen), Math.round(barrelW)
-  );
-  // Barrel 1 highlight
+  ctx.fillRect(0, Math.round(-barrelGap / 2 - barrelW), Math.round(barrelLen), Math.round(barrelW));
   ctx.fillStyle = '#5a5a68';
-  ctx.fillRect(
-    Math.round(facingRight ? barrelStartX : barrelStartX - barrelLen),
-    Math.round(y - barrelGap / 2 - barrelW),
-    Math.round(barrelLen), 1
-  );
+  ctx.fillRect(0, Math.round(-barrelGap / 2 - barrelW), Math.round(barrelLen), 1);
 
-  // Barrel 2
+  // Barrel 2 (lower)
   ctx.fillStyle = '#3a3a42';
-  ctx.fillRect(
-    Math.round(facingRight ? barrelStartX : barrelStartX - barrelLen),
-    Math.round(y + barrelGap / 2),
-    Math.round(barrelLen), Math.round(barrelW)
-  );
+  ctx.fillRect(0, Math.round(barrelGap / 2), Math.round(barrelLen), Math.round(barrelW));
   ctx.fillStyle = '#5a5a68';
-  ctx.fillRect(
-    Math.round(facingRight ? barrelStartX : barrelStartX - barrelLen),
-    Math.round(y + barrelGap / 2),
-    Math.round(barrelLen), 1
-  );
+  ctx.fillRect(0, Math.round(barrelGap / 2), Math.round(barrelLen), 1);
 
-  // Barrel muzzle glow (green — turbolaser)
-  const muzzleX = facingRight ? barrelStartX + barrelLen - 2 * s : barrelStartX - barrelLen;
+  // Barrel muzzle glow (green turbolaser)
   ctx.fillStyle = '#33ff44';
   ctx.globalAlpha = 0.6;
-  ctx.fillRect(Math.round(muzzleX), Math.round(y - barrelGap / 2 - barrelW - 1), Math.round(3 * s), Math.round(barrelGap + barrelW * 2 + 2));
+  ctx.fillRect(Math.round(barrelLen - 2 * s), Math.round(-barrelGap / 2 - barrelW - 1), Math.round(3 * s), Math.round(barrelGap + barrelW * 2 + 2));
   ctx.globalAlpha = 1;
+  // Bright muzzle dots
   ctx.fillStyle = '#88ff88';
-  ctx.fillRect(Math.round(muzzleX + s), Math.round(y - barrelGap / 2 - barrelW / 2), Math.round(ps), Math.round(barrelW));
-  ctx.fillRect(Math.round(muzzleX + s), Math.round(y + barrelGap / 2), Math.round(ps), Math.round(barrelW));
+  ctx.fillRect(Math.round(barrelLen - s), Math.round(-barrelGap / 2 - barrelW / 2), Math.round(ps), Math.round(barrelW));
+  ctx.fillRect(Math.round(barrelLen - s), Math.round(barrelGap / 2), Math.round(ps), Math.round(barrelW));
 
   ctx.restore();
 }
