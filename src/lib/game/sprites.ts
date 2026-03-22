@@ -634,6 +634,158 @@ export function drawTrenchWall(
     }
   }
 
+  // Layer 7: Extra horizontal pipe clusters at different depths
+  if (w > 20) {
+    const isLeft = x < w;
+    // Pipe cluster A — thin twin pipes
+    const pipeA_X = isLeft ? x + 3 : x + w - 7;
+    ctx.fillStyle = '#0d0d22';
+    ctx.fillRect(pipeA_X, y, ps + 1, h);
+    ctx.fillStyle = '#0d0d22';
+    ctx.fillRect(pipeA_X + ps * 2, y, ps, h);
+    ctx.fillStyle = '#1a1a36';
+    ctx.fillRect(pipeA_X, y, 1, h);
+    ctx.fillRect(pipeA_X + ps * 2, y, 1, h);
+    // Pipe brackets
+    ctx.fillStyle = '#252544';
+    for (let pb = y - (scrollOffset % 52); pb < y + h; pb += 52) {
+      if (pb < y - 2) continue;
+      ctx.fillRect(pipeA_X - 1, Math.round(pb), ps * 3 + 2, ps);
+    }
+
+    // Pipe cluster B — offset deeper set
+    if (w > 30) {
+      const pipeB_X = isLeft ? x + w - 28 : x + 22;
+      ctx.fillStyle = '#0b0b20';
+      ctx.fillRect(pipeB_X, y, ps * 2, h);
+      ctx.fillStyle = '#181834';
+      ctx.fillRect(pipeB_X, y, 1, h);
+      ctx.fillStyle = '#070718';
+      ctx.fillRect(pipeB_X + ps * 2, y, 1, h);
+      // Brackets
+      ctx.fillStyle = '#222240';
+      for (let pb2 = y - (scrollOffset % 44) + 20; pb2 < y + h; pb2 += 44) {
+        if (pb2 < y - 2) continue;
+        ctx.fillRect(pipeB_X - 1, Math.round(pb2), ps * 2 + 2, ps);
+      }
+    }
+  }
+
+  // Layer 8: Recessed machinery boxes with internal grid
+  if (w > 22) {
+    const boxSpacing = 64;
+    const boxOff = scrollOffset % boxSpacing;
+    const isLeft = x < w;
+    for (let by = y - boxOff + 10; by < y + h; by += boxSpacing) {
+      if (by < y || by + 12 > y + h) continue;
+      const bHash = ((by * 11 + x * 5 + 99) & 0xff);
+      if (bHash % 3 !== 0) continue; // ~33% of slots get a box
+      const bx = isLeft ? x + 12 + (bHash % Math.max(1, Math.floor(w - 30))) : x + 4 + (bHash % Math.max(1, Math.floor(w - 30)));
+      const bw = 8 + (bHash % 6);
+      const bh = 6 + (bHash % 5);
+      // Dark recessed background
+      ctx.fillStyle = '#040410';
+      ctx.fillRect(Math.round(bx), Math.round(by), bw, bh);
+      // Internal grid lines
+      ctx.fillStyle = '#0e0e24';
+      for (let gx = bx + 2; gx < bx + bw - 1; gx += 3) {
+        ctx.fillRect(Math.round(gx), Math.round(by + 1), 1, bh - 2);
+      }
+      for (let gy = by + 2; gy < by + bh - 1; gy += 3) {
+        ctx.fillRect(Math.round(bx + 1), Math.round(gy), bw - 2, 1);
+      }
+      // Border highlight
+      ctx.fillStyle = '#1a1a34';
+      ctx.fillRect(Math.round(bx), Math.round(by), bw, 1);
+      ctx.fillRect(Math.round(bx), Math.round(by), 1, bh);
+      ctx.fillStyle = '#060614';
+      ctx.fillRect(Math.round(bx), Math.round(by + bh - 1), bw, 1);
+      ctx.fillRect(Math.round(bx + bw - 1), Math.round(by), 1, bh);
+    }
+  }
+
+  // Layer 9: Extra indicator lights (doubled frequency, blue + white added)
+  if (w > 14) {
+    const lightSpacing2 = 32;
+    const lightOff2 = (scrollOffset + 16) % lightSpacing2;
+    const isLeft = x < w;
+    const lightBaseX2 = isLeft ? x + 4 : x + w - 10;
+
+    for (let ly = y - lightOff2; ly < y + h; ly += lightSpacing2) {
+      if (ly < y - ps || ly > y + h - ps) continue;
+      const hash = ((ly * 11 + x * 17 + 53) & 0xff);
+      if (hash % 3 !== 0) continue; // ~33% density
+
+      let color: string;
+      let glowColor: string;
+      const lightType = hash % 12;
+      if (lightType < 3) { color = '#2266cc'; glowColor = '#4488ff'; }
+      else if (lightType < 5) { color = '#ccccdd'; glowColor = '#ffffff'; }
+      else if (lightType < 8) { color = '#ff8c00'; glowColor = '#ff6600'; }
+      else { color = '#22aa44'; glowColor = '#00ff44'; }
+
+      const blink = lightType < 2 && Math.sin(scrollOffset * 0.15 + ly * 0.08) < 0;
+      if (blink) continue;
+
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = glowColor;
+      ctx.fillRect(Math.round(lightBaseX2 - 1), Math.round(ly - 1), ps * 3, ps * 3);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(lightBaseX2), Math.round(ly), ps, ps);
+    }
+  }
+
+  // Layer 10: Surface bolts/rivets at panel intersections
+  {
+    const boltSpacing = 16;
+    const boltOff = (scrollOffset * 0.9) % boltSpacing;
+    for (let by = y - boltOff; by < y + h; by += boltSpacing) {
+      for (let bx = x + 2; bx < x + w - 2; bx += boltSpacing) {
+        if (by < y || by > y + h) continue;
+        const bHash = ((bx * 7 + by * 3 + 41) & 0xff);
+        if (bHash % 4 !== 0) continue; // ~25% of intersections
+        ctx.fillStyle = '#2a2a48';
+        ctx.fillRect(Math.round(bx), Math.round(by), 1, 1);
+        // Tiny highlight
+        ctx.fillStyle = '#3e3e60';
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(Math.round(bx), Math.round(by), 1, 1);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  // Layer 11: Heat vents — small orange-lit rectangles
+  if (w > 18) {
+    const heatSpacing = 96;
+    const heatOff = (scrollOffset + 40) % heatSpacing;
+    const isLeft = x < w;
+    for (let hy = y - heatOff + 50; hy < y + h; hy += heatSpacing) {
+      if (hy < y || hy + 6 > y + h) continue;
+      const hHash = ((hy * 9 + x * 13 + 77) & 0xff);
+      if (hHash % 4 !== 0) continue;
+      const hx = isLeft ? x + 8 + (hHash % Math.max(1, Math.floor(w - 20))) : x + 4 + (hHash % Math.max(1, Math.floor(w - 20)));
+      // Orange glow behind
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = '#ff6600';
+      ctx.fillRect(Math.round(hx - 1), Math.round(hy - 1), 8, 6);
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#ff4400';
+      ctx.fillRect(Math.round(hx), Math.round(hy), 6, 4);
+      ctx.globalAlpha = 1;
+      // Vent slats
+      ctx.fillStyle = '#1a0a00';
+      ctx.fillRect(Math.round(hx), Math.round(hy), 6, 4);
+      ctx.fillStyle = '#ff6600';
+      ctx.globalAlpha = 0.4;
+      for (let sl = 0; sl < 4; sl += 2) {
+        ctx.fillRect(Math.round(hx), Math.round(hy + sl), 6, 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
   // Outer edge shadow
   if (x <= 1) {
     ctx.fillStyle = '#060610';

@@ -168,6 +168,11 @@ export function playR2D2() { getSound('r2d2', 'r2d2.mp3', 0.3).play(); }
 export function playChewbacca() { getSound('chewbacca', 'chewbacca.mp3', 0.5).play(); }
 export function playSonicCharge() { getSound('sonic', 'sonic-charge.mp3', 0.4).play(); }
 export function playBattleAlarm() { getSound('battle-alarm', 'alarm.mp3', 0.3).play(); }
+export function playStayOnTarget() { getSound('stay-target', 'stay-on-target.mp3', 0.5).play(); }
+export function playAlmostThere() { getSound('almost', 'almost-there.mp3', 0.5).play(); }
+export function playUseTheForce() { getSound('use-force', 'use-the-force.mp3', 0.5).play(); }
+export function playIHaveYouNow() { getSound('i-have-you', 'i-have-you-now.mp3', 0.5).play(); }
+export function playYahoo() { getSound('yahoo', 'yahoo.mp3', 0.5).play(); }
 
 // ── Star Wars theme (MP3 file) ──────────────────────────────────
 import { Howl } from 'howler';

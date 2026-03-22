@@ -13,17 +13,17 @@ export function createKeyboardControls(): { controls: Controls; destroy: () => v
   const controls: Controls = { up: false, down: false, left: false, right: false, fire: false, ix: 0, iy: 0 };
 
   function onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { controls.up = true; controls.iy = -1; e.preventDefault(); }
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === 'z' || e.key === 'Z') { controls.up = true; controls.iy = -1; e.preventDefault(); }
     if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { controls.down = true; controls.iy = 1; e.preventDefault(); }
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { controls.left = true; controls.ix = -1; e.preventDefault(); }
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.key === 'q' || e.key === 'Q') { controls.left = true; controls.ix = -1; e.preventDefault(); }
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { controls.right = true; controls.ix = 1; e.preventDefault(); }
     if (e.key === ' ') { controls.fire = true; e.preventDefault(); }
   }
 
   function onKeyUp(e: KeyboardEvent) {
-    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { controls.up = false; if (!controls.down) controls.iy = 0; }
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === 'z' || e.key === 'Z') { controls.up = false; if (!controls.down) controls.iy = 0; }
     if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { controls.down = false; if (!controls.up) controls.iy = 0; }
-    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { controls.left = false; if (!controls.right) controls.ix = 0; }
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A' || e.key === 'q' || e.key === 'Q') { controls.left = false; if (!controls.right) controls.ix = 0; }
     if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { controls.right = false; if (!controls.left) controls.ix = 0; }
     if (e.key === ' ') controls.fire = false;
   }

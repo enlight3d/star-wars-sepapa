@@ -14,7 +14,8 @@ import {
   playLaserShoot, playEnemyLaser, playExplosion,
   playPlayerHit, playGameOver, playVictory,
   playTieScream, playR2D2, playChewbacca,
-  playSonicCharge, playBattleAlarm, stopAllGameSounds
+  playSonicCharge, playBattleAlarm, stopAllGameSounds,
+  playStayOnTarget, playAlmostThere, playUseTheForce, playYahoo
 } from '$lib/audio/audioManager';
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -470,6 +471,12 @@ export function createTrenchRun(
           charIndex: 0,
           charTimer: 0
         };
+
+        // Voice clips tied to specific radio messages
+        if (rm.text.startsWith('Restez en formation')) playStayOnTarget();
+        if (rm.text.startsWith('Touche')) playExplosion();
+        if (rm.text.startsWith('Utilise la Force')) playUseTheForce();
+        if (rm.text.startsWith('Yahoo')) { playYahoo(); setTimeout(() => playChewbacca(), 800); }
       }
     }
 
@@ -589,6 +596,7 @@ export function createTrenchRun(
       bulletTimeFactor = 1;
       playSonicCharge(); // Death Star explosion sound
       playVictory();
+      setTimeout(() => playAlmostThere(), 600);
     }
 
     if (victoryTriggered) {

@@ -65,7 +65,7 @@
     <p class="title">TRENCH RUN</p>
     <p class="subtitle">Élimine les TIE Fighters et les tourelles !</p>
     {#if !isMobile}
-      <p class="controls-hint">WASD / Flèches : Déplacer &middot; ESPACE : Tirer</p>
+      <p class="controls-hint">ZQSD / Flèches : Déplacer &middot; ESPACE : Tirer</p>
     {/if}
   </div>
 
