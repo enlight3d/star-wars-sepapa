@@ -3,6 +3,7 @@
   import { fade } from 'svelte/transition';
   import Starfield from '$lib/components/Starfield.svelte';
   import ClickToStart from '$lib/components/ClickToStart.svelte';
+  import ImperialTerminal from '$lib/components/ImperialTerminal.svelte';
 
   let transitioning = $state(false);
 
@@ -25,6 +26,10 @@
   {#if $currentStep === 0}
     <div in:fade={{ duration: 500 }}>
       <ClickToStart onComplete={nextStep} />
+    </div>
+  {:else if $currentStep === 1}
+    <div in:fade={{ duration: 500 }}>
+      <ImperialTerminal onComplete={nextStep} />
     </div>
   {:else}
     <div in:fade={{ duration: 500 }}>
