@@ -2,8 +2,10 @@ import type { Controls } from './controls';
 import {
   drawXWing, drawTIE, drawTurret, drawLaser,
   drawTrenchWall, drawTrenchFloor, drawExplosion,
-  drawPixelText, drawShieldIcon, drawTargetingReticle, drawExhaustPort
+  drawPixelText, drawShieldIcon, drawTargetingReticle, drawExhaustPort,
+  drawCrossbar, drawWallProtrusion, drawVerticalPipe
 } from './sprites';
+import type { ProtrusionType } from './sprites';
 import {
   playLaserShoot, playEnemyLaser, playExplosion,
   playPlayerHit, playGameOver, playVictory
@@ -30,6 +32,13 @@ interface Turret extends Entity {
 }
 interface WallObstacle extends Entity {
   onLeft: boolean;
+  protrusionType: ProtrusionType;
+}
+interface CrossbarObstacle extends Entity {
+  // x/y = top-left corner, w = width, h = bar thickness
+}
+interface VerticalPipeObstacle extends Entity {
+  // x/y = top-left corner, w = pipe width, h = pipe height
 }
 interface Explosion { x: number; y: number; frame: number; maxFrames: number; big: boolean; }
 
@@ -170,6 +179,8 @@ export function createTrenchRun(
   const ties: TIEFighter[] = [];
   const turrets: Turret[] = [];
   const obstacles: WallObstacle[] = [];
+  const crossbars: CrossbarObstacle[] = [];
+  const verticalPipes: VerticalPipeObstacle[] = [];
   const lasers: Laser[] = [];
   const explosions: Explosion[] = [];
   let fireCooldown = 0;
@@ -193,6 +204,9 @@ export function createTrenchRun(
 
   // Obstacle spawning
   let obstacleSpawnTimer = 0;
+  let crossbarSpawnTimer = 0;
+  let verticalPipeSpawnTimer = 0;
+  let obstacleSequence = 0; // procedural counter for alternating patterns
 
   // Radio messages
   let activeRadio: RadioMessage | null = null;
@@ -280,17 +294,61 @@ export function createTrenchRun(
     });
   }
 
+  const PROTRUSION_TYPES: ProtrusionType[] = ['pipes', 'antenna', 'sensor', 'machinery', 'vent'];
+
   function spawnObstacle() {
     const bounds = getTrenchBounds(state.elapsed);
-    const onLeft = Math.random() > 0.5;
-    const obsW = 15 + Math.random() * 25;
-    const obsH = 8 + Math.random() * 12;
+    // Alternate sides procedurally for a designed feel
+    obstacleSequence++;
+    const onLeft = obstacleSequence % 2 === 0;
+    const obsW = 18 + Math.random() * 28;
+    const obsH = 12 + Math.random() * 18;
+    // Pick protrusion type based on sequence for variety
+    const typeIndex = (obstacleSequence * 7 + Math.floor(state.elapsed * 3)) % PROTRUSION_TYPES.length;
+    const protrusionType = PROTRUSION_TYPES[typeIndex];
     obstacles.push({
       x: onLeft ? bounds.left : bounds.right - obsW * scale,
       y: -obsH * scale,
       w: obsW * scale,
       h: obsH * scale,
-      onLeft
+      onLeft,
+      protrusionType
+    });
+  }
+
+  function spawnCrossbar() {
+    const bounds = getTrenchBounds(state.elapsed);
+    const trenchW = bounds.right - bounds.left;
+    const phase = getCurrentPhase(state.elapsed);
+    // Crossbar spans 40-70% of trench width, leaving a gap for the player
+    const barWidthRatio = phase === 3 ? 0.55 + Math.random() * 0.15 : phase === 2 ? 0.45 + Math.random() * 0.15 : 0.35 + Math.random() * 0.15;
+    const barW = trenchW * barWidthRatio;
+    const barH = (6 + Math.random() * 4) * scale;
+    // Alternate left/right alignment so player must dodge
+    const fromLeft = obstacleSequence % 3 !== 0;
+    const barX = fromLeft ? bounds.left : bounds.right - barW;
+    crossbars.push({
+      x: barX,
+      y: -barH,
+      w: barW,
+      h: barH
+    });
+  }
+
+  function spawnVerticalPipe() {
+    const bounds = getTrenchBounds(state.elapsed);
+    const trenchW = bounds.right - bounds.left;
+    const phase = getCurrentPhase(state.elapsed);
+    const pipeW = (6 + Math.random() * 6) * scale;
+    const pipeH = (25 + Math.random() * 20) * scale;
+    // Place pipe in the center area of the trench (not on walls)
+    const margin = trenchW * 0.15;
+    const pipeX = bounds.left + margin + Math.random() * (trenchW - margin * 2 - pipeW);
+    verticalPipes.push({
+      x: pipeX,
+      y: -pipeH,
+      w: pipeW,
+      h: pipeH
     });
   }
 
@@ -479,10 +537,34 @@ export function createTrenchRun(
 
     // Obstacle spawning (phases 1-3, more frequent in phase 2-3)
     obstacleSpawnTimer += effectiveDt;
-    const obsInterval = phase === 3 ? 1.5 : phase === 2 ? 2.5 : 3.5;
+    const obsInterval = phase === 3 ? 1.0 : phase === 2 ? 1.8 : 2.8;
     if (obstacleSpawnTimer > obsInterval) {
       obstacleSpawnTimer = 0;
       spawnObstacle();
+      // In phases 2-3, sometimes spawn a second wall obstacle from the opposite side
+      if (phase >= 2 && Math.random() > 0.5) {
+        spawnObstacle();
+      }
+    }
+
+    // Crossbar spawning (phase 2-3, occasional in phase 1)
+    crossbarSpawnTimer += effectiveDt;
+    const crossbarInterval = phase === 3 ? 3.0 : phase === 2 ? 5.0 : 8.0;
+    if (crossbarSpawnTimer > crossbarInterval) {
+      crossbarSpawnTimer = 0;
+      if (phase >= 2 || Math.random() > 0.5) {
+        spawnCrossbar();
+      }
+    }
+
+    // Vertical pipe spawning (phase 2-3 only)
+    if (phase >= 2) {
+      verticalPipeSpawnTimer += effectiveDt;
+      const pipeInterval = phase === 3 ? 2.5 : 4.0;
+      if (verticalPipeSpawnTimer > pipeInterval) {
+        verticalPipeSpawnTimer = 0;
+        spawnVerticalPipe();
+      }
     }
 
     // TIE spawning (phase 2-3 only)
@@ -589,6 +671,12 @@ export function createTrenchRun(
     for (const obs of obstacles) {
       obs.y += scrollSpeed * effectiveDt;
     }
+    for (const cb of crossbars) {
+      cb.y += scrollSpeed * effectiveDt;
+    }
+    for (const vp of verticalPipes) {
+      vp.y += scrollSpeed * effectiveDt;
+    }
 
     // Update lasers
     for (const l of lasers) {
@@ -665,10 +753,25 @@ export function createTrenchRun(
 
     // Obstacle vs player
     for (const obs of obstacles) {
-      // Obstacle hitbox uses center-based collision
       const obsCx = obs.x + obs.w / 2;
       const obsCy = obs.y + obs.h / 2;
       if (collides(ph, { x: obsCx, y: obsCy, w: obs.w * 0.8, h: obs.h * 0.8 })) {
+        hitPlayer();
+      }
+    }
+    // Crossbar vs player
+    for (const cb of crossbars) {
+      const cbCx = cb.x + cb.w / 2;
+      const cbCy = cb.y + cb.h / 2;
+      if (collides(ph, { x: cbCx, y: cbCy, w: cb.w * 0.9, h: cb.h * 0.9 })) {
+        hitPlayer();
+      }
+    }
+    // Vertical pipe vs player
+    for (const vp of verticalPipes) {
+      const vpCx = vp.x + vp.w / 2;
+      const vpCy = vp.y + vp.h / 2;
+      if (collides(ph, { x: vpCx, y: vpCy, w: vp.w * 0.8, h: vp.h * 0.8 })) {
         hitPlayer();
       }
     }
@@ -686,6 +789,12 @@ export function createTrenchRun(
     }
     for (let i = obstacles.length - 1; i >= 0; i--) {
       if (obstacles[i].y > ch + 60) obstacles.splice(i, 1);
+    }
+    for (let i = crossbars.length - 1; i >= 0; i--) {
+      if (crossbars[i].y > ch + 60) crossbars.splice(i, 1);
+    }
+    for (let i = verticalPipes.length - 1; i >= 0; i--) {
+      if (verticalPipes[i].y > ch + 60) verticalPipes.splice(i, 1);
     }
 
     // Update explosions
@@ -721,15 +830,19 @@ export function createTrenchRun(
     drawTrenchWall(ctx, 0, 0, bounds.left, ch, scrollOffset);
     drawTrenchWall(ctx, bounds.right, 0, cw - bounds.right, ch, scrollOffset);
 
-    // Wall obstacles
+    // Wall obstacles (detailed protrusions)
     for (const obs of obstacles) {
-      ctx.fillStyle = '#222238';
-      ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-      // Pixel detail
-      ctx.fillStyle = '#2a2a44';
-      ctx.fillRect(obs.x + 2, obs.y + 2, obs.w - 4, 2);
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(obs.x + 2, obs.y + obs.h - 4, obs.w - 4, 2);
+      drawWallProtrusion(ctx, obs.x, obs.y, obs.w, obs.h, obs.onLeft, obs.protrusionType, scrollOffset);
+    }
+
+    // Crossbar obstacles
+    for (const cb of crossbars) {
+      drawCrossbar(ctx, cb.x, cb.y, cb.w, cb.h, scrollOffset);
+    }
+
+    // Vertical pipe obstacles
+    for (const vp of verticalPipes) {
+      drawVerticalPipe(ctx, vp.x, vp.y, vp.w, vp.h, scrollOffset);
     }
 
     // Phase 3: Exhaust port
@@ -929,11 +1042,16 @@ export function createTrenchRun(
     ties.length = 0;
     turrets.length = 0;
     obstacles.length = 0;
+    crossbars.length = 0;
+    verticalPipes.length = 0;
     lasers.length = 0;
     explosions.length = 0;
     tieSpawnTimer = 0;
     turretSpawnTimer = 0;
     obstacleSpawnTimer = 0;
+    crossbarSpawnTimer = 0;
+    verticalPipeSpawnTimer = 0;
+    obstacleSequence = 0;
     fireCooldown = 0;
     screenShakeTimer = 0;
     lastTime = 0;

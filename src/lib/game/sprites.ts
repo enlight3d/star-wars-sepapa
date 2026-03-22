@@ -1083,3 +1083,301 @@ export function drawExhaustPort(
   ctx.globalAlpha = 1;
   ctx.restore();
 }
+
+// ── Crossbar Obstacle (horizontal bar spanning part of trench) ───────
+export function drawCrossbar(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, width: number, height: number,
+  scrollOffset: number
+) {
+  const ps = PS;
+  ctx.save();
+
+  // Main bar body — dark metallic
+  ctx.fillStyle = '#2a2a3e';
+  ctx.fillRect(x, y, width, height);
+
+  // Top highlight edge
+  ctx.fillStyle = '#4a4a60';
+  ctx.fillRect(x, y, width, ps);
+
+  // Bottom shadow edge
+  ctx.fillStyle = '#14142a';
+  ctx.fillRect(x, y + height - ps, width, ps);
+
+  // Mid-tone panel fill
+  ctx.fillStyle = '#323248';
+  ctx.fillRect(x + ps, y + ps, width - ps * 2, height - ps * 2);
+
+  // Horizontal groove line (center)
+  ctx.fillStyle = '#1a1a2e';
+  const midY = y + Math.round(height / 2) - 1;
+  ctx.fillRect(x, midY, width, ps);
+  ctx.fillStyle = '#3e3e58';
+  ctx.fillRect(x, midY + ps, width, 1);
+
+  // Rivets at regular intervals along the bar
+  const rivetSpacing = Math.max(12, Math.round(width / 8));
+  for (let rx = x + rivetSpacing; rx < x + width - 4; rx += rivetSpacing) {
+    // Top rivet row
+    ctx.fillStyle = '#5a5a70';
+    ctx.fillRect(Math.round(rx), y + ps * 2, ps, ps);
+    ctx.fillStyle = '#222238';
+    ctx.fillRect(Math.round(rx) + 1, y + ps * 2 + 1, 1, 1);
+
+    // Bottom rivet row
+    ctx.fillStyle = '#5a5a70';
+    ctx.fillRect(Math.round(rx), y + height - ps * 3, ps, ps);
+    ctx.fillStyle = '#222238';
+    ctx.fillRect(Math.round(rx) + 1, y + height - ps * 3 + 1, 1, 1);
+  }
+
+  // Support brackets at ends
+  const bracketW = Math.min(ps * 4, width * 0.1);
+  // Left bracket
+  ctx.fillStyle = '#3a3a52';
+  ctx.fillRect(x, y - ps * 2, bracketW, height + ps * 4);
+  ctx.fillStyle = '#4e4e66';
+  ctx.fillRect(x, y - ps * 2, ps, height + ps * 4);
+  // Right bracket
+  ctx.fillStyle = '#3a3a52';
+  ctx.fillRect(x + width - bracketW, y - ps * 2, bracketW, height + ps * 4);
+  ctx.fillStyle = '#4e4e66';
+  ctx.fillRect(x + width - bracketW, y - ps * 2, ps, height + ps * 4);
+
+  // Warning stripes (diagonal hash marks, subtle)
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#ffaa00';
+  const stripeSpacing = ps * 6;
+  for (let sx = x; sx < x + width; sx += stripeSpacing) {
+    ctx.fillRect(Math.round(sx), y, ps * 2, height);
+  }
+  ctx.globalAlpha = 1;
+
+  // Small blinking indicator light on left bracket
+  const blink = Math.sin((scrollOffset * 0.1) + x * 0.01) > 0;
+  if (blink) {
+    ctx.fillStyle = '#ff2222';
+    ctx.fillRect(x + ps, y + Math.round(height / 2) - ps, ps, ps * 2);
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(x, y + Math.round(height / 2) - ps * 2, ps * 3, ps * 4);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
+// ── Wall Protrusion Types (varied Death Star machinery) ──────────────
+export type ProtrusionType = 'pipes' | 'antenna' | 'sensor' | 'machinery' | 'vent';
+
+export function drawWallProtrusion(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number,
+  onLeft: boolean, type: ProtrusionType, scrollOffset: number
+) {
+  const ps = PS;
+  ctx.save();
+
+  // Base block — darker than walls
+  ctx.fillStyle = '#1e1e32';
+  ctx.fillRect(x, y, w, h);
+
+  // Top highlight
+  ctx.fillStyle = '#3a3a54';
+  ctx.fillRect(x, y, w, ps);
+  // Bottom shadow
+  ctx.fillStyle = '#101024';
+  ctx.fillRect(x, y + h - ps, w, ps);
+
+  // Inner edge highlight (side facing trench center)
+  if (onLeft) {
+    ctx.fillStyle = '#44445e';
+    ctx.fillRect(x + w - ps, y, ps, h);
+  } else {
+    ctx.fillStyle = '#44445e';
+    ctx.fillRect(x, y, ps, h);
+  }
+
+  switch (type) {
+    case 'pipes': {
+      // Cluster of horizontal pipes
+      const pipeCount = Math.max(2, Math.floor(h / (ps * 5)));
+      for (let i = 0; i < pipeCount; i++) {
+        const py = y + ps * 2 + i * Math.floor((h - ps * 4) / pipeCount);
+        const pipeH = ps * 2;
+        // Pipe body
+        ctx.fillStyle = '#2e2e48';
+        ctx.fillRect(x + ps, py, w - ps * 2, pipeH);
+        // Pipe highlight (top)
+        ctx.fillStyle = '#4a4a66';
+        ctx.fillRect(x + ps, py, w - ps * 2, 1);
+        // Pipe shadow (bottom)
+        ctx.fillStyle = '#161630';
+        ctx.fillRect(x + ps, py + pipeH - 1, w - ps * 2, 1);
+        // Joint rings
+        const jointX = onLeft ? x + w - ps * 3 : x + ps;
+        ctx.fillStyle = '#3a3a56';
+        ctx.fillRect(jointX, py - 1, ps * 2, pipeH + 2);
+      }
+      break;
+    }
+    case 'antenna': {
+      // Antenna array — vertical spikes
+      const antennaCount = Math.max(2, Math.floor(w / (ps * 5)));
+      for (let i = 0; i < antennaCount; i++) {
+        const ax = x + ps * 2 + i * Math.floor((w - ps * 4) / antennaCount);
+        const antennaH = h * 0.6 + (i % 2) * h * 0.2;
+        // Antenna shaft
+        ctx.fillStyle = '#383854';
+        ctx.fillRect(ax, y + h - antennaH, ps, antennaH);
+        // Antenna tip (blinking)
+        const tipBlink = Math.sin(scrollOffset * 0.15 + i * 1.5) > 0.3;
+        ctx.fillStyle = tipBlink ? '#ff4444' : '#882222';
+        ctx.fillRect(ax - 1, y + h - antennaH - ps, ps + 2, ps);
+      }
+      // Base plate
+      ctx.fillStyle = '#282844';
+      ctx.fillRect(x + ps, y + h - ps * 3, w - ps * 2, ps * 2);
+      break;
+    }
+    case 'sensor': {
+      // Sensor dish — small circular dish
+      const dishCx = x + w / 2;
+      const dishCy = y + h / 2;
+      const dishR = Math.min(w, h) * 0.35;
+      // Dish mount arm
+      const mountX = onLeft ? x + ps : x + w - ps * 3;
+      ctx.fillStyle = '#2a2a46';
+      ctx.fillRect(mountX, dishCy - ps, w * 0.3, ps * 2);
+      // Dish body (pixelated circle)
+      for (let dy = -dishR; dy <= dishR; dy += ps) {
+        for (let dx = -dishR; dx <= dishR; dx += ps) {
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist <= dishR) {
+            ctx.fillStyle = dist < dishR * 0.3 ? '#5a5a78' : dist < dishR * 0.7 ? '#3e3e5a' : '#2a2a46';
+            ctx.fillRect(Math.round(dishCx + dx), Math.round(dishCy + dy), ps, ps);
+          }
+        }
+      }
+      // Center receiver
+      ctx.fillStyle = '#ff8c00';
+      ctx.fillRect(Math.round(dishCx - 1), Math.round(dishCy - 1), ps, ps);
+      break;
+    }
+    case 'machinery': {
+      // Complex machinery block with panel lines and vents
+      const panelRows = Math.max(2, Math.floor(h / (ps * 6)));
+      const panelCols = Math.max(2, Math.floor(w / (ps * 6)));
+      const pw = (w - ps * 2) / panelCols;
+      const ph2 = (h - ps * 2) / panelRows;
+      for (let r = 0; r < panelRows; r++) {
+        for (let c = 0; c < panelCols; c++) {
+          const px2 = x + ps + c * pw;
+          const py2 = y + ps + r * ph2;
+          const shade = ((r + c) % 2 === 0) ? '#252540' : '#2a2a48';
+          ctx.fillStyle = shade;
+          ctx.fillRect(Math.round(px2), Math.round(py2), Math.round(pw - 1), Math.round(ph2 - 1));
+          // Panel line
+          ctx.fillStyle = '#161630';
+          ctx.fillRect(Math.round(px2 + pw - 1), Math.round(py2), 1, Math.round(ph2));
+          ctx.fillRect(Math.round(px2), Math.round(py2 + ph2 - 1), Math.round(pw), 1);
+        }
+      }
+      // Status light
+      ctx.fillStyle = '#22cc44';
+      ctx.fillRect(x + ps * 2, y + ps * 2, ps, ps);
+      // Small vent
+      ctx.fillStyle = '#0a0a1e';
+      ctx.fillRect(x + w - ps * 5, y + h - ps * 4, ps * 3, ps * 2);
+      break;
+    }
+    case 'vent': {
+      // Large vent grate
+      ctx.fillStyle = '#0a0a16';
+      ctx.fillRect(x + ps * 2, y + ps * 2, w - ps * 4, h - ps * 4);
+      // Horizontal slats
+      const slatCount = Math.max(3, Math.floor((h - ps * 4) / (ps * 3)));
+      for (let i = 0; i < slatCount; i++) {
+        const sy = y + ps * 2 + i * ((h - ps * 4) / slatCount);
+        ctx.fillStyle = '#2a2a44';
+        ctx.fillRect(x + ps * 2, Math.round(sy), w - ps * 4, ps);
+      }
+      // Frame
+      ctx.fillStyle = '#3a3a56';
+      ctx.fillRect(x + ps, y + ps, w - ps * 2, ps);
+      ctx.fillRect(x + ps, y + h - ps * 2, w - ps * 2, ps);
+      ctx.fillRect(x + ps, y + ps, ps, h - ps * 2);
+      ctx.fillRect(x + w - ps * 2, y + ps, ps, h - ps * 2);
+      break;
+    }
+  }
+
+  ctx.restore();
+}
+
+// ── Vertical Pipe Obstacle (rising from trench floor) ────────────────
+export function drawVerticalPipe(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number,
+  scrollOffset: number
+) {
+  const ps = PS;
+  ctx.save();
+
+  // Main pipe body — cylindrical shading
+  const segments = Math.max(3, Math.floor(w / ps));
+  for (let i = 0; i < segments; i++) {
+    const sx = x + i * (w / segments);
+    const sw = w / segments;
+    // Cylindrical gradient: dark edges, lighter center
+    const t = i / (segments - 1);
+    const brightness = Math.round(20 + 30 * Math.sin(t * Math.PI));
+    ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness + 20})`;
+    ctx.fillRect(Math.round(sx), y, Math.ceil(sw), h);
+  }
+
+  // Highlight stripe (left of center)
+  ctx.fillStyle = '#4a4a66';
+  ctx.fillRect(x + Math.round(w * 0.35), y, ps, h);
+
+  // Dark edge lines
+  ctx.fillStyle = '#0e0e22';
+  ctx.fillRect(x, y, ps, h);
+  ctx.fillRect(x + w - ps, y, ps, h);
+
+  // Ring joints at regular intervals
+  const ringSpacing = Math.max(20, h * 0.15);
+  const ringOff = scrollOffset % ringSpacing;
+  for (let ry = y - ringOff; ry < y + h; ry += ringSpacing) {
+    if (ry < y - 4 || ry > y + h - ps * 2) continue;
+    ctx.fillStyle = '#3e3e5a';
+    ctx.fillRect(x - ps, Math.round(ry), w + ps * 2, ps * 2);
+    ctx.fillStyle = '#505070';
+    ctx.fillRect(x - ps, Math.round(ry), w + ps * 2, 1);
+    ctx.fillStyle = '#1a1a34';
+    ctx.fillRect(x - ps, Math.round(ry) + ps * 2 - 1, w + ps * 2, 1);
+    // Bolts on ring
+    ctx.fillStyle = '#585878';
+    ctx.fillRect(x + ps, Math.round(ry) + 1, ps, ps);
+    ctx.fillRect(x + w - ps * 2, Math.round(ry) + 1, ps, ps);
+  }
+
+  // Top cap
+  ctx.fillStyle = '#3a3a56';
+  ctx.fillRect(x - ps, y, w + ps * 2, ps * 3);
+  ctx.fillStyle = '#505070';
+  ctx.fillRect(x - ps, y, w + ps * 2, ps);
+  // Warning light on top
+  const blink = Math.sin(scrollOffset * 0.12 + x * 0.05) > 0;
+  ctx.fillStyle = blink ? '#ff6600' : '#662200';
+  ctx.fillRect(x + Math.round(w / 2) - ps, y - ps, ps * 2, ps);
+  if (blink) {
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#ff6600';
+    ctx.fillRect(x + Math.round(w / 2) - ps * 3, y - ps * 2, ps * 6, ps * 3);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
